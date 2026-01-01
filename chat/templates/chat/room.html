@@ -1,0 +1,381 @@
+{% extends 'chat/base.html' %}
+
+{% block title %}
+  Chat with {{ other_user.username }}
+{% endblock %}
+
+{% block extra_css %}
+  <style>
+    .chat-container {
+      background: white;
+      border-radius: 15px;
+      overflow: hidden;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+      display: flex;
+      flex-direction: column;
+      height: calc(100vh - 200px);
+      max-height: 700px;
+    }
+    
+    .chat-header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    
+    .chat-header .user-avatar {
+      width: 45px;
+      height: 45px;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.3rem;
+      font-weight: bold;
+    }
+    
+    .chat-header h2 {
+      font-size: 1.3rem;
+      font-weight: 600;
+    }
+    
+    .connection-status {
+      margin-left: auto;
+      padding: 0.4rem 0.8rem;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      background: rgba(255, 255, 255, 0.2);
+    }
+    
+    .connection-status.connected {
+      background: rgba(76, 175, 80, 0.3);
+    }
+    
+    .connection-status.disconnected {
+      background: rgba(244, 67, 54, 0.3);
+    }
+    
+    #chat-messages {
+      flex: 1;
+      padding: 1.5rem;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 0.8rem;
+      background: #f8f9fa;
+    }
+    
+    .message {
+      display: flex;
+      max-width: 70%;
+      animation: messageSlide 0.3s ease-out;
+    }
+    
+    @keyframes messageSlide {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    .message.sent {
+      align-self: flex-end;
+    }
+    
+    .message.received {
+      align-self: flex-start;
+    }
+    
+    .message-bubble {
+      padding: 0.8rem 1rem;
+      border-radius: 18px;
+      word-wrap: break-word;
+    }
+    
+    .message.sent .message-bubble {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border-bottom-right-radius: 4px;
+    }
+    
+    .message.received .message-bubble {
+      background: white;
+      color: #333;
+      border-bottom-left-radius: 4px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+    
+    .message-info {
+      font-size: 0.75rem;
+      opacity: 0.7;
+      margin-top: 0.3rem;
+      padding: 0 0.5rem;
+    }
+    
+    .message.sent .message-info {
+      text-align: right;
+    }
+    
+    .chat-input-container {
+      padding: 1.5rem;
+      background: white;
+      border-top: 1px solid #e0e0e0;
+    }
+    
+    .chat-input-form {
+      display: flex;
+      gap: 0.8rem;
+    }
+    
+    #message-input {
+      flex: 1;
+      padding: 0.8rem 1rem;
+      border: 2px solid #e0e0e0;
+      border-radius: 25px;
+      font-size: 1rem;
+      outline: none;
+      transition: border-color 0.3s;
+    }
+    
+    #message-input:focus {
+      border-color: #667eea;
+    }
+    
+    #send-button {
+      padding: 0.8rem 2rem;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 25px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    
+    #send-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+    }
+    
+    #send-button:active {
+      transform: translateY(0);
+    }
+    
+    #send-button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+    
+    .loading {
+      text-align: center;
+      padding: 2rem;
+      color: #999;
+    }
+    
+    /* Scrollbar styling */
+    #chat-messages::-webkit-scrollbar {
+      width: 6px;
+    }
+    
+    #chat-messages::-webkit-scrollbar-track {
+      background: #f1f1f1;
+    }
+    
+    #chat-messages::-webkit-scrollbar-thumb {
+      background: #888;
+      border-radius: 3px;
+    }
+    
+    #chat-messages::-webkit-scrollbar-thumb:hover {
+      background: #555;
+    }
+  </style>
+{% endblock %}
+
+{% block content %}
+  <div class="chat-container">
+    <div class="chat-header">
+      <div class="user-avatar">{{ other_user.username|first|upper }}</div>
+      <div>
+        <h2>{{ other_user.username }}</h2>
+      </div>
+      <span class="connection-status" id="connection-status">Connecting...</span>
+    </div>
+
+    <div id="chat-messages">
+      <div class="loading">Loading messages...</div>
+    </div>
+
+    <div class="chat-input-container">
+      <form class="chat-input-form" id="chat-form">
+        <input type="text" id="message-input" placeholder="Type a message..." autocomplete="off" disabled />
+        <button type="submit" id="send-button" disabled>Send</button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    // Get username from template context
+    const currentUser = '{{ user.username }}'
+    const otherUser = '{{ username }}'
+    
+    // WebSocket connection
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+    const wsUrl = `${protocol}//${window.location.host}/ws/chat/${otherUser}/`
+    let chatSocket = null
+    
+    // DOM elements
+    const messagesContainer = document.getElementById('chat-messages')
+    const messageInput = document.getElementById('message-input')
+    const sendButton = document.getElementById('send-button')
+    const chatForm = document.getElementById('chat-form')
+    const connectionStatus = document.getElementById('connection-status')
+    
+    /**
+     * Initialize WebSocket connection
+     */
+    function connectWebSocket() {
+      chatSocket = new WebSocket(wsUrl)
+    
+      // Connection opened
+      chatSocket.onopen = function (e) {
+        console.log('WebSocket connection established')
+        updateConnectionStatus(true)
+        messageInput.disabled = false
+        sendButton.disabled = false
+      }
+    
+      // Message received from server
+      chatSocket.onmessage = function (e) {
+        const data = JSON.parse(e.data)
+    
+        // Handle message history (initial load)
+        if (data.type === 'message_history') {
+          messagesContainer.innerHTML = ''
+          data.messages.forEach((msg) => displayMessage(msg))
+          scrollToBottom()
+        }
+        // Handle new messages
+        else {
+          displayMessage(data)
+          scrollToBottom()
+        }
+      }
+    
+      // Connection closed
+      chatSocket.onclose = function (e) {
+        console.log('WebSocket connection closed')
+        updateConnectionStatus(false)
+        messageInput.disabled = true
+        sendButton.disabled = true
+    
+        // Attempt to reconnect after 3 seconds
+        setTimeout(connectWebSocket, 3000)
+      }
+    
+      // Connection error
+      chatSocket.onerror = function (error) {
+        console.error('WebSocket error:', error)
+        updateConnectionStatus(false)
+      }
+    }
+    
+    /**
+     * Display a message in the chat
+     */
+    function displayMessage(data) {
+      const messageDiv = document.createElement('div')
+      const isSent = data.sender === currentUser
+      messageDiv.className = `message ${isSent ? 'sent' : 'received'}`
+    
+      // Format timestamp
+      const timestamp = new Date(data.timestamp)
+      const timeString = timestamp.toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+    
+      messageDiv.innerHTML = `
+                        <div>
+                            <div class="message-bubble">
+                                ${escapeHtml(data.message)}
+                            </div>
+                            <div class="message-info">${timeString}</div>
+                        </div>
+                    `
+    
+      messagesContainer.appendChild(messageDiv)
+    }
+    
+    /**
+     * Send message to server
+     */
+    function sendMessage(e) {
+      e.preventDefault()
+    
+      const message = messageInput.value.trim()
+      if (message && chatSocket.readyState === WebSocket.OPEN) {
+        chatSocket.send(
+          JSON.stringify({
+            message: message
+          })
+        )
+        messageInput.value = ''
+        messageInput.focus()
+      }
+    }
+    
+    /**
+     * Update connection status indicator
+     */
+    function updateConnectionStatus(isConnected) {
+      if (isConnected) {
+        connectionStatus.textContent = 'Connected'
+        connectionStatus.className = 'connection-status connected'
+      } else {
+        connectionStatus.textContent = 'Disconnected'
+        connectionStatus.className = 'connection-status disconnected'
+      }
+    }
+    
+    /**
+     * Scroll chat to bottom
+     */
+    function scrollToBottom() {
+      messagesContainer.scrollTop = messagesContainer.scrollHeight
+    }
+    
+    /**
+     * Escape HTML to prevent XSS
+     */
+    function escapeHtml(text) {
+      const div = document.createElement('div')
+      div.textContent = text
+      return div.innerHTML
+    }
+    
+    // Event listeners
+    chatForm.addEventListener('submit', sendMessage)
+    
+    // Allow sending with Enter key
+    messageInput.addEventListener('keypress', function (e) {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault()
+        sendMessage(e)
+      }
+    })
+    
+    // Initialize WebSocket connection
+    connectWebSocket()
+  </script>
+{% endblock %}
