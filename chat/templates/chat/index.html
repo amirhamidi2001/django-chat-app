@@ -1,0 +1,101 @@
+{% extends 'chat/base.html' %}
+
+{% block title %}
+  Users - Django Chat
+{% endblock %}
+
+{% block extra_css %}
+  <style>
+    .users-container {
+      background: white;
+      border-radius: 15px;
+      padding: 2rem;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+    }
+    
+    .users-container h2 {
+      color: #333;
+      margin-bottom: 1.5rem;
+      font-size: 1.8rem;
+    }
+    
+    .users-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      gap: 1rem;
+    }
+    
+    .user-card {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      padding: 1.5rem;
+      border-radius: 10px;
+      text-decoration: none;
+      color: white;
+      transition: transform 0.2s, box-shadow 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    
+    .user-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+    }
+    
+    .user-avatar {
+      width: 50px;
+      height: 50px;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      font-weight: bold;
+    }
+    
+    .user-info {
+      flex: 1;
+    }
+    
+    .user-name {
+      font-weight: 600;
+      font-size: 1.1rem;
+    }
+    
+    .user-status {
+      font-size: 0.85rem;
+      opacity: 0.9;
+    }
+    
+    .empty-state {
+      text-align: center;
+      padding: 3rem;
+      color: #999;
+    }
+  </style>
+{% endblock %}
+
+{% block content %}
+  <div class="users-container">
+    <h2>Select a user to start chatting</h2>
+
+    {% if users %}
+      <div class="users-list">
+        {% for user in users %}
+          <a href="{% url 'chat:room' user.username %}" class="user-card">
+            <div class="user-avatar">{{ user.username|first|upper }}</div>
+            <div class="user-info">
+              <div class="user-name">{{ user.username }}</div>
+              <div class="user-status">Click to chat</div>
+            </div>
+          </a>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty-state">
+        <p>No other users available yet.</p>
+      </div>
+    {% endif %}
+  </div>
+{% endblock %}
