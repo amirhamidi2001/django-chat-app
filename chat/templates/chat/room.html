@@ -36,15 +36,58 @@
       justify-content: center;
       font-size: 1.3rem;
       font-weight: bold;
+      position: relative;
+    }
+    
+    .online-status-dot {
+      position: absolute;
+      bottom: 2px;
+      right: 2px;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      border: 2px solid white;
+      background: #9e9e9e;
+      transition: background 0.3s ease;
+    }
+    
+    .online-status-dot.online {
+      background: #4caf50;
+      box-shadow: 0 0 8px rgba(76, 175, 80, 0.6);
+      animation: pulse 2s infinite;
+    }
+    
+    .online-status-dot.offline {
+      background: #9e9e9e;
+    }
+    
+    @keyframes pulse {
+      0%,
+      100% {
+        box-shadow: 0 0 8px rgba(76, 175, 80, 0.6);
+      }
+      50% {
+        box-shadow: 0 0 12px rgba(76, 175, 80, 0.8);
+      }
+    }
+    
+    .chat-header-info {
+      flex: 1;
     }
     
     .chat-header h2 {
       font-size: 1.3rem;
       font-weight: 600;
+      margin-bottom: 0.2rem;
+    }
+    
+    .user-status-text {
+      font-size: 0.85rem;
+      opacity: 0.9;
+      font-weight: 400;
     }
     
     .connection-status {
-      margin-left: auto;
       padding: 0.4rem 0.8rem;
       border-radius: 20px;
       font-size: 0.85rem;
@@ -67,6 +110,49 @@
       flex-direction: column;
       gap: 0.8rem;
       background: #f8f9fa;
+      position: relative;
+    }
+    
+    /* NEW: Loading indicator for pagination */
+    .load-more-indicator {
+      display: none;
+      text-align: center;
+      padding: 1rem;
+      color: #667eea;
+      font-size: 0.9rem;
+      font-weight: 500;
+    }
+    
+    .load-more-indicator.active {
+      display: block;
+      animation: fadeIn 0.3s ease-in;
+    }
+    
+    .load-more-spinner {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid rgba(102, 126, 234, 0.3);
+      border-radius: 50%;
+      border-top-color: #667eea;
+      animation: spin 0.8s linear infinite;
+      margin-right: 0.5rem;
+      vertical-align: middle;
+    }
+    
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+    
+    /* NEW: End of messages indicator */
+    .end-of-messages {
+      text-align: center;
+      padding: 1rem;
+      color: #999;
+      font-size: 0.85rem;
+      font-style: italic;
     }
     
     .message {
@@ -122,6 +208,79 @@
     
     .message.sent .message-info {
       text-align: right;
+    }
+    
+    .typing-indicator {
+      display: none;
+      align-self: flex-start;
+      padding: 0.8rem 1rem;
+      background: white;
+      border-radius: 18px;
+      border-bottom-left-radius: 4px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      margin-bottom: 0.5rem;
+      animation: fadeIn 0.3s ease-in;
+    }
+    
+    .typing-indicator.active {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(5px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    .typing-indicator-text {
+      color: #666;
+      font-size: 0.9rem;
+      font-style: italic;
+    }
+    
+    .typing-dots {
+      display: flex;
+      gap: 3px;
+    }
+    
+    .typing-dot {
+      width: 8px;
+      height: 8px;
+      background: #667eea;
+      border-radius: 50%;
+      animation: typingBounce 1.4s infinite ease-in-out;
+    }
+    
+    .typing-dot:nth-child(1) {
+      animation-delay: 0s;
+    }
+    
+    .typing-dot:nth-child(2) {
+      animation-delay: 0.2s;
+    }
+    
+    .typing-dot:nth-child(3) {
+      animation-delay: 0.4s;
+    }
+    
+    @keyframes typingBounce {
+      0%,
+      60%,
+      100% {
+        transform: translateY(0);
+        opacity: 0.7;
+      }
+      30% {
+        transform: translateY(-10px);
+        opacity: 1;
+      }
     }
     
     .chat-input-container {
@@ -205,15 +364,35 @@
 {% block content %}
   <div class="chat-container">
     <div class="chat-header">
-      <div class="user-avatar">{{ other_user.username|first|upper }}</div>
-      <div>
+      <div class="user-avatar">
+        {{ other_user.username|first|upper }}
+        <span class="online-status-dot" id="online-status-indicator" title="Checking status..."></span>
+      </div>
+      <div class="chat-header-info">
         <h2>{{ other_user.username }}</h2>
+        <div class="user-status-text" id="last-seen-text">Checking status...</div>
       </div>
       <span class="connection-status" id="connection-status">Connecting...</span>
     </div>
 
     <div id="chat-messages">
-      <div class="loading">Loading messages...</div>
+      <!-- NEW: Loading indicator for pagination -->
+      <div class="load-more-indicator" id="load-more-indicator">
+        <span class="load-more-spinner"></span>
+        <span>Loading older messages...</span>
+      </div>
+
+      <div class="loading" id="initial-loading">Loading messages...</div>
+
+      <!-- Typing Indicator -->
+      <div class="typing-indicator" id="typing-indicator">
+        <span class="typing-indicator-text" id="typing-text">{{ other_user.username }} is typing</span>
+        <div class="typing-dots">
+          <span class="typing-dot"></span>
+          <span class="typing-dot"></span>
+          <span class="typing-dot"></span>
+        </div>
+      </div>
     </div>
 
     <div class="chat-input-container">
@@ -240,6 +419,26 @@
     const sendButton = document.getElementById('send-button')
     const chatForm = document.getElementById('chat-form')
     const connectionStatus = document.getElementById('connection-status')
+    const onlineStatusIndicator = document.getElementById('online-status-indicator')
+    const lastSeenText = document.getElementById('last-seen-text')
+    const typingIndicator = document.getElementById('typing-indicator')
+    const loadMoreIndicator = document.getElementById('load-more-indicator')
+    const initialLoading = document.getElementById('initial-loading')
+    
+    // Typing indicator state management
+    let typingTimer = null
+    let isCurrentlyTyping = false
+    const TYPING_TIMER_LENGTH = 3000
+    const TYPING_DEBOUNCE = 300
+    let typingDebounceTimer = null
+    
+    // NEW: Pagination state management
+    let currentOffset = 0
+    let hasMoreMessages = true
+    let isLoadingMore = false
+    let isInitialLoad = true
+    let totalMessageCount = 0
+    const SCROLL_THRESHOLD = 100 // Pixels from top to trigger load
     
     /**
      * Initialize WebSocket connection
@@ -247,7 +446,6 @@
     function connectWebSocket() {
       chatSocket = new WebSocket(wsUrl)
     
-      // Connection opened
       chatSocket.onopen = function (e) {
         console.log('WebSocket connection established')
         updateConnectionStatus(true)
@@ -255,35 +453,40 @@
         sendButton.disabled = false
       }
     
-      // Message received from server
       chatSocket.onmessage = function (e) {
         const data = JSON.parse(e.data)
     
-        // Handle message history (initial load)
+        // Handle initial message history
         if (data.type === 'message_history') {
-          messagesContainer.innerHTML = ''
-          data.messages.forEach((msg) => displayMessage(msg))
-          scrollToBottom()
+          handleInitialMessages(data)
+        }
+        // NEW: Handle paginated messages response
+        else if (data.type === 'load_more_response') {
+          handleLoadMoreResponse(data)
         }
         // Handle new messages
-        else {
+        else if (data.type === 'message') {
           displayMessage(data)
           scrollToBottom()
         }
+        // Handle user status updates
+        else if (data.type === 'user_status') {
+          updateUserStatus(data.username, data.is_online, data.last_seen)
+        }
+        // Handle typing indicator
+        else if (data.type === 'typing_indicator') {
+          handleTypingIndicator(data.username, data.is_typing)
+        }
       }
     
-      // Connection closed
       chatSocket.onclose = function (e) {
         console.log('WebSocket connection closed')
         updateConnectionStatus(false)
         messageInput.disabled = true
         sendButton.disabled = true
-    
-        // Attempt to reconnect after 3 seconds
         setTimeout(connectWebSocket, 3000)
       }
     
-      // Connection error
       chatSocket.onerror = function (error) {
         console.error('WebSocket error:', error)
         updateConnectionStatus(false)
@@ -291,14 +494,256 @@
     }
     
     /**
-     * Display a message in the chat
+     * NEW: Handle initial message history with pagination data
      */
-    function displayMessage(data) {
+    function handleInitialMessages(data) {
+      // Hide initial loading indicator
+      if (initialLoading) {
+        initialLoading.style.display = 'none'
+      }
+    
+      // Clear messages container but keep indicators
+      const indicators = [loadMoreIndicator, typingIndicator]
+      messagesContainer.innerHTML = ''
+      indicators.forEach((el) => messagesContainer.appendChild(el))
+    
+      // Update pagination state
+      currentOffset = data.offset || data.messages.length
+      hasMoreMessages = data.has_more || false
+      totalMessageCount = data.total_count || 0
+    
+      // Messages come in descending order (newest first), reverse for display
+      const messages = [...data.messages].reverse()
+      messages.forEach((msg) => displayMessage(msg, false)) // false = don't animate initial load
+    
+      // Scroll to bottom after initial load
+      isInitialLoad = false
+      scrollToBottom()
+    
+      // Show end indicator if no more messages
+      if (!hasMoreMessages && totalMessageCount > 0) {
+        showEndOfMessages()
+      }
+    
+      console.log(`Loaded ${messages.length} messages. Has more: ${hasMoreMessages}`)
+    }
+    
+    /**
+     * NEW: Handle load more messages response
+     */
+    function handleLoadMoreResponse(data) {
+      // Hide loading indicator
+      loadMoreIndicator.classList.remove('active')
+      isLoadingMore = false
+    
+      // Update pagination state
+      const previousOffset = currentOffset
+      currentOffset = data.offset
+      hasMoreMessages = data.has_more || false
+    
+      if (data.messages && data.messages.length > 0) {
+        // Save current scroll position
+        const previousScrollHeight = messagesContainer.scrollHeight
+        const previousScrollTop = messagesContainer.scrollTop
+    
+        // Messages come in descending order (newest first), reverse for display
+        const messages = [...data.messages].reverse()
+    
+        // Insert messages at the top (after load indicator)
+        messages.forEach((msg) => {
+          displayMessage(msg, false, true) // true = prepend
+        })
+    
+        // Restore scroll position (maintain user's view)
+        const newScrollHeight = messagesContainer.scrollHeight
+        messagesContainer.scrollTop = previousScrollTop + (newScrollHeight - previousScrollHeight)
+    
+        console.log(`Loaded ${messages.length} older messages. Has more: ${hasMoreMessages}`)
+      }
+    
+      // Show end indicator if no more messages
+      if (!hasMoreMessages) {
+        showEndOfMessages()
+      }
+    }
+    
+    /**
+     * NEW: Detect scroll to top and load more messages
+     */
+    function handleScroll() {
+      // Don't load if already loading, no more messages, or initial load
+      if (isLoadingMore || !hasMoreMessages || isInitialLoad) {
+        return
+      }
+    
+      // Check if scrolled near the top
+      if (messagesContainer.scrollTop < SCROLL_THRESHOLD) {
+        loadMoreMessages()
+      }
+    }
+    
+    /**
+     * NEW: Request more messages from server
+     */
+    function loadMoreMessages() {
+      if (isLoadingMore || !hasMoreMessages) {
+        return
+      }
+    
+      isLoadingMore = true
+      loadMoreIndicator.classList.add('active')
+    
+      // Send load more request
+      if (chatSocket && chatSocket.readyState === WebSocket.OPEN) {
+        chatSocket.send(
+          JSON.stringify({
+            type: 'load_more',
+            offset: currentOffset
+          })
+        )
+      }
+    }
+    
+    /**
+     * NEW: Show end of messages indicator
+     */
+    function showEndOfMessages() {
+      const endIndicator = document.createElement('div')
+      endIndicator.className = 'end-of-messages'
+      endIndicator.textContent = '— Beginning of conversation —'
+      endIndicator.id = 'end-of-messages'
+    
+      // Remove existing end indicator if present
+      const existing = document.getElementById('end-of-messages')
+      if (existing) {
+        existing.remove()
+      }
+    
+      // Insert at the top (after load indicator)
+      messagesContainer.insertBefore(endIndicator, loadMoreIndicator.nextSibling)
+    }
+    
+    /**
+     * Send typing status to server
+     */
+    function sendTypingStatus(isTyping) {
+      if (chatSocket && chatSocket.readyState === WebSocket.OPEN) {
+        chatSocket.send(
+          JSON.stringify({
+            type: 'typing',
+            is_typing: isTyping
+          })
+        )
+      }
+    }
+    
+    /**
+     * Handle input events to detect typing
+     */
+    function handleInputTyping() {
+      clearTimeout(typingDebounceTimer)
+    
+      if (!isCurrentlyTyping) {
+        isCurrentlyTyping = true
+        sendTypingStatus(true)
+      }
+    
+      clearTimeout(typingTimer)
+      typingTimer = setTimeout(() => {
+        isCurrentlyTyping = false
+        sendTypingStatus(false)
+      }, TYPING_TIMER_LENGTH)
+    }
+    
+    /**
+     * Show/hide typing indicator for other user
+     */
+    function handleTypingIndicator(username, isTyping) {
+      if (username !== otherUser) {
+        return
+      }
+    
+      if (isTyping) {
+        typingIndicator.classList.add('active')
+        scrollToBottom()
+      } else {
+        typingIndicator.classList.remove('active')
+      }
+    }
+    
+    /**
+     * Update user online/offline status in the UI
+     */
+    function updateUserStatus(username, isOnline, lastSeen) {
+      if (username !== otherUser) {
+        return
+      }
+    
+      if (onlineStatusIndicator) {
+        if (isOnline) {
+          onlineStatusIndicator.classList.add('online')
+          onlineStatusIndicator.classList.remove('offline')
+          onlineStatusIndicator.title = 'Online'
+    
+          if (lastSeenText) {
+            lastSeenText.textContent = 'Online'
+            lastSeenText.style.color = '#4caf50'
+          }
+        } else {
+          onlineStatusIndicator.classList.remove('online')
+          onlineStatusIndicator.classList.add('offline')
+          onlineStatusIndicator.title = 'Offline'
+    
+          if (lastSeenText && lastSeen) {
+            const lastSeenDate = new Date(lastSeen)
+            const timeAgo = getTimeAgo(lastSeenDate)
+            lastSeenText.textContent = `Last seen ${timeAgo}`
+            lastSeenText.style.color = '#e0e0e0'
+          }
+        }
+      }
+    }
+    
+    /**
+     * Calculate "time ago" for last seen
+     */
+    function getTimeAgo(date) {
+      const seconds = Math.floor((new Date() - date) / 1000)
+    
+      const intervals = {
+        year: 31536000,
+        month: 2592000,
+        week: 604800,
+        day: 86400,
+        hour: 3600,
+        minute: 60
+      }
+    
+      for (const [unit, secondsInUnit] of Object.entries(intervals)) {
+        const interval = Math.floor(secondsInUnit <= seconds ? seconds / secondsInUnit : 0)
+        if (interval >= 1) {
+          return `${interval} ${unit}${interval > 1 ? 's' : ''} ago`
+        }
+      }
+    
+      return 'just now'
+    }
+    
+    /**
+     * Display a message in the chat
+     * @param {boolean} animate - Whether to animate the message entrance
+     * @param {boolean} prepend - Whether to add at top (for pagination) or bottom (for new messages)
+     */
+    function displayMessage(data, animate = true, prepend = false) {
       const messageDiv = document.createElement('div')
       const isSent = data.sender === currentUser
       messageDiv.className = `message ${isSent ? 'sent' : 'received'}`
     
-      // Format timestamp
+      // Don't animate initial load or paginated messages
+      if (!animate) {
+        messageDiv.style.animation = 'none'
+      }
+    
       const timestamp = new Date(data.timestamp)
       const timeString = timestamp.toLocaleTimeString([], {
         hour: '2-digit',
@@ -306,15 +751,23 @@
       })
     
       messageDiv.innerHTML = `
-                        <div>
-                            <div class="message-bubble">
-                                ${escapeHtml(data.message)}
-                            </div>
-                            <div class="message-info">${timeString}</div>
-                        </div>
-                    `
+                <div>
+                    <div class="message-bubble">
+                        ${escapeHtml(data.message)}
+                    </div>
+                    <div class="message-info">${timeString}</div>
+                </div>
+            `
     
-      messagesContainer.appendChild(messageDiv)
+      if (prepend) {
+        // Insert after the end-of-messages or load-more indicator
+        const endIndicator = document.getElementById('end-of-messages')
+        const insertAfter = endIndicator || loadMoreIndicator
+        messagesContainer.insertBefore(messageDiv, insertAfter.nextSibling)
+      } else {
+        // Insert before typing indicator (normal flow)
+        messagesContainer.insertBefore(messageDiv, typingIndicator)
+      }
     }
     
     /**
@@ -327,11 +780,19 @@
       if (message && chatSocket.readyState === WebSocket.OPEN) {
         chatSocket.send(
           JSON.stringify({
+            type: 'message',
             message: message
           })
         )
+    
         messageInput.value = ''
         messageInput.focus()
+    
+        clearTimeout(typingTimer)
+        if (isCurrentlyTyping) {
+          isCurrentlyTyping = false
+          sendTypingStatus(false)
+        }
       }
     }
     
@@ -366,14 +827,23 @@
     
     // Event listeners
     chatForm.addEventListener('submit', sendMessage)
-    
-    // Allow sending with Enter key
+    messageInput.addEventListener('input', handleInputTyping)
     messageInput.addEventListener('keypress', function (e) {
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault()
         sendMessage(e)
       }
     })
+    messageInput.addEventListener('blur', function () {
+      clearTimeout(typingTimer)
+      if (isCurrentlyTyping) {
+        isCurrentlyTyping = false
+        sendTypingStatus(false)
+      }
+    })
+    
+    // NEW: Add scroll event listener for infinite scroll
+    messagesContainer.addEventListener('scroll', handleScroll)
     
     // Initialize WebSocket connection
     connectWebSocket()
