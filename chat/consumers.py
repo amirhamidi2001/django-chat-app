@@ -13,51 +13,40 @@ class ChatConsumer(AsyncWebsocketConsumer):
     - Status tracking (Phase 1)
     - Typing indicators (Phase 2)
     - Message pagination (Phase 3)
+    - Read receipts (Phase 4)
+    - Media support (Phase 5)
     """
 
-    # NEW: Pagination settings
-    MESSAGES_PER_PAGE = 20  # Number of messages to load per request
+    MESSAGES_PER_PAGE = 20
 
     async def connect(self):
         """
         Called when WebSocket connection is established
-        IMPORTANT: Accept connection early to prevent handshake errors
         """
-        # Get the current user from scope
         self.user = self.scope["user"]
 
-        # Reject connection if user is not authenticated
         if not self.user.is_authenticated:
             await self.close()
             return
 
-        # Get the other user's username from URL route
         self.other_username = self.scope["url_route"]["kwargs"]["username"]
 
-        # Verify other user exists
         other_user_exists = await self.check_user_exists(self.other_username)
         if not other_user_exists:
             await self.close()
             return
 
-        # Create room name (sorted usernames for consistency)
         usernames = sorted([self.user.username, self.other_username])
         self.room_name = f"chat_{'_'.join(usernames)}"
         self.room_group_name = f"chat_{self.room_name}"
 
-        # CRITICAL: Accept the connection BEFORE any other operations
         await self.accept()
 
-        # Join room group
         await self.channel_layer.group_add(self.room_group_name, self.channel_name)
 
-        # Update user's online status
         await self.set_user_online(self.user)
-
-        # Broadcast status change to the room
         await self.broadcast_status_change(self.user.username, True)
 
-        # Send initial status of the other user to this connection
         other_user_status = await self.get_user_status(self.other_username)
         await self.send(
             text_data=json.dumps(
@@ -70,7 +59,10 @@ class ChatConsumer(AsyncWebsocketConsumer):
             )
         )
 
-        # NEW: Send initial message history with pagination info
+        read_message_ids = await self.mark_messages_as_read()
+        if read_message_ids:
+            await self.broadcast_read_receipt(read_message_ids)
+
         await self.send_initial_messages()
 
     async def disconnect(self, close_code):
@@ -78,13 +70,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
         Called when WebSocket connection is closed
         """
         if hasattr(self, "room_group_name"):
-            # Update user's offline status
             await self.set_user_offline(self.user)
-
-            # Broadcast status change to the room
             await self.broadcast_status_change(self.user.username, False)
 
-            # Clear any typing indicator when user disconnects
             await self.channel_layer.group_send(
                 self.room_group_name,
                 {
@@ -94,7 +82,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 },
             )
 
-            # Leave room group
             await self.channel_layer.group_discard(
                 self.room_group_name, self.channel_name
             )
@@ -102,7 +89,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
     async def receive(self, text_data):
         """
         Called when a message is received from WebSocket
-        Handles: messages, typing indicators, and pagination requests
         """
         data = json.loads(text_data)
         message_type = data.get("type", "message")
@@ -114,10 +100,8 @@ class ChatConsumer(AsyncWebsocketConsumer):
             if not message_content.strip():
                 return
 
-            # Save message to database
             message = await self.save_message(message_content)
 
-            # Broadcast message to room group
             await self.channel_layer.group_send(
                 self.room_group_name,
                 {
@@ -126,14 +110,39 @@ class ChatConsumer(AsyncWebsocketConsumer):
                     "sender": self.user.username,
                     "timestamp": message.timestamp.isoformat(),
                     "message_id": message.id,
+                    "is_read": False,
+                    "has_file": False,  # NEW
                 },
             )
 
-        # Handle typing indicator signals
+        # NEW: Handle file message broadcast (after HTTP upload)
+        elif message_type == "file_message":
+            message_id = data.get("message_id")
+            message_data = await self.get_message_data(message_id)
+
+            if message_data:
+                await self.channel_layer.group_send(
+                    self.room_group_name,
+                    {
+                        "type": "chat_message",
+                        "message": message_data["content"],
+                        "sender": self.user.username,
+                        "timestamp": message_data["timestamp"],
+                        "message_id": message_id,
+                        "is_read": False,
+                        "has_file": True,
+                        "file_url": message_data["file_url"],
+                        "file_name": message_data["file_name"],
+                        "file_size": message_data["file_size"],
+                        "file_type": message_data["file_type"],
+                        "is_image": message_data["is_image"],
+                    },
+                )
+
+        # Handle typing indicator
         elif message_type == "typing":
             is_typing = data.get("is_typing", False)
 
-            # Broadcast typing status to room group
             await self.channel_layer.group_send(
                 self.room_group_name,
                 {
@@ -143,30 +152,50 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 },
             )
 
-        # NEW: Handle load more messages request
+        # Handle load more messages
         elif message_type == "load_more":
             offset = data.get("offset", 0)
             await self.send_paginated_messages(offset)
+
+        # Handle mark as read
+        elif message_type == "mark_as_read":
+            message_ids = data.get("message_ids", [])
+            if message_ids:
+                updated_ids = await self.mark_specific_messages_read(message_ids)
+                if updated_ids:
+                    await self.broadcast_read_receipt(updated_ids)
 
     async def chat_message(self, event):
         """
         Handler for chat messages sent to the group
         """
-        await self.send(
-            text_data=json.dumps(
+        message_data = {
+            "type": "message",
+            "message": event["message"],
+            "sender": event["sender"],
+            "timestamp": event["timestamp"],
+            "message_id": event["message_id"],
+            "is_read": event.get("is_read", False),
+            "has_file": event.get("has_file", False),
+        }
+
+        # NEW: Add file data if present
+        if event.get("has_file"):
+            message_data.update(
                 {
-                    "type": "message",
-                    "message": event["message"],
-                    "sender": event["sender"],
-                    "timestamp": event["timestamp"],
-                    "message_id": event["message_id"],
+                    "file_url": event["file_url"],
+                    "file_name": event["file_name"],
+                    "file_size": event["file_size"],
+                    "file_type": event["file_type"],
+                    "is_image": event["is_image"],
                 }
             )
-        )
+
+        await self.send(text_data=json.dumps(message_data))
 
     async def status_change(self, event):
         """
-        Handler for status change events sent to the group
+        Handler for status change events
         """
         await self.send(
             text_data=json.dumps(
@@ -181,10 +210,8 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
     async def typing_indicator(self, event):
         """
-        Handler for typing indicator events sent to the group
-        Only forward to OTHER users (not the sender)
+        Handler for typing indicator events
         """
-        # Don't send typing indicator back to the person who's typing
         if event["username"] != self.user.username:
             await self.send(
                 text_data=json.dumps(
@@ -192,6 +219,21 @@ class ChatConsumer(AsyncWebsocketConsumer):
                         "type": "typing_indicator",
                         "username": event["username"],
                         "is_typing": event["is_typing"],
+                    }
+                )
+            )
+
+    async def read_receipt(self, event):
+        """
+        Handler for read receipt events
+        """
+        if event["sender_username"] == self.user.username:
+            await self.send(
+                text_data=json.dumps(
+                    {
+                        "type": "read_receipt",
+                        "message_ids": event["message_ids"],
+                        "read_by": event["read_by"],
                     }
                 )
             )
@@ -215,8 +257,22 @@ class ChatConsumer(AsyncWebsocketConsumer):
             },
         )
 
+    async def broadcast_read_receipt(self, message_ids):
+        """
+        Broadcast read receipt to the room group
+        """
+        await self.channel_layer.group_send(
+            self.room_group_name,
+            {
+                "type": "read_receipt",
+                "message_ids": message_ids,
+                "read_by": self.user.username,
+                "sender_username": self.other_username,
+            },
+        )
+
     # ========================================================================
-    # NEW: PAGINATION METHODS
+    # PAGINATION METHODS
     # ========================================================================
 
     async def send_initial_messages(self):
@@ -255,21 +311,15 @@ class ChatConsumer(AsyncWebsocketConsumer):
         )
 
     # ========================================================================
-    # DATABASE OPERATIONS (All wrapped in @database_sync_to_async)
+    # DATABASE OPERATIONS
     # ========================================================================
 
     @database_sync_to_async
     def check_user_exists(self, username):
-        """
-        Check if a user exists in the database
-        """
         return User.objects.filter(username=username).exists()
 
     @database_sync_to_async
     def set_user_online(self, user):
-        """
-        Set user status to online
-        """
         status, created = UserStatus.objects.get_or_create(user=user)
         status.is_online = True
         status.last_seen = timezone.now()
@@ -278,9 +328,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def set_user_offline(self, user):
-        """
-        Set user status to offline with last_seen timestamp
-        """
         try:
             status = UserStatus.objects.get(user=user)
             status.is_online = False
@@ -292,9 +339,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def get_user_status(self, username):
-        """
-        Get user's online status and last seen time
-        """
         try:
             user = User.objects.get(username=username)
             status, created = UserStatus.objects.get_or_create(
@@ -309,20 +353,35 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def save_message(self, content):
-        """
-        Save message to database
-        """
         receiver = User.objects.get(username=self.other_username)
         return Message.objects.create(
             sender=self.user, receiver=receiver, content=content
         )
 
     @database_sync_to_async
+    def get_message_data(self, message_id):
+        """
+        NEW: Get message data including file info
+        """
+        try:
+            message = Message.objects.get(id=message_id, sender=self.user)
+            return {
+                "content": message.content,
+                "timestamp": message.timestamp.isoformat(),
+                "file_url": message.file.url if message.file else None,
+                "file_name": message.file_name,
+                "file_size": message.file_size,
+                "file_type": message.file_type,
+                "is_image": message.is_image,
+            }
+        except Message.DoesNotExist:
+            return None
+
+    @database_sync_to_async
     def get_paginated_messages(self, offset=0):
         """
-        NEW: Retrieve paginated message history between two users
-        Returns messages in DESCENDING order (newest first) for pagination,
-        but client will reverse them for display
+        Retrieve paginated message history
+        NEW: Includes file metadata
         """
         try:
             other_user = User.objects.get(username=self.other_username)
@@ -334,17 +393,13 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 "offset": offset,
             }
 
-        # Get total count of messages in this conversation
         total_count = Message.objects.filter(
             django_models.Q(sender=self.user, receiver=other_user)
             | django_models.Q(sender=other_user, receiver=self.user)
         ).count()
 
-        # Calculate if there are more messages beyond this batch
         has_more = (offset + self.MESSAGES_PER_PAGE) < total_count
 
-        # Fetch messages in DESCENDING order (newest first)
-        # This allows efficient pagination with LIMIT/OFFSET
         messages = (
             Message.objects.filter(
                 django_models.Q(sender=self.user, receiver=other_user)
@@ -354,16 +409,30 @@ class ChatConsumer(AsyncWebsocketConsumer):
             .order_by("-timestamp")[offset : offset + self.MESSAGES_PER_PAGE]
         )
 
-        # Convert to list and return metadata
-        messages_list = [
-            {
+        messages_list = []
+        for msg in messages:
+            msg_data = {
                 "message": msg.content,
                 "sender": msg.sender.username,
                 "timestamp": msg.timestamp.isoformat(),
                 "message_id": msg.id,
+                "is_read": msg.is_read,
+                "has_file": bool(msg.file),
             }
-            for msg in messages
-        ]
+
+            # NEW: Add file metadata if present
+            if msg.file:
+                msg_data.update(
+                    {
+                        "file_url": msg.file.url,
+                        "file_name": msg.file_name,
+                        "file_size": msg.file_size,
+                        "file_type": msg.file_type,
+                        "is_image": msg.is_image,
+                    }
+                )
+
+            messages_list.append(msg_data)
 
         return {
             "messages": messages_list,
@@ -373,32 +442,33 @@ class ChatConsumer(AsyncWebsocketConsumer):
         }
 
     @database_sync_to_async
-    def get_message_history(self):
-        """
-        DEPRECATED: Kept for backward compatibility
-        Use get_paginated_messages instead
-        """
+    def mark_messages_as_read(self):
         try:
             other_user = User.objects.get(username=self.other_username)
         except User.DoesNotExist:
             return []
 
-        # Get last 50 messages for backward compatibility
-        messages = (
-            Message.objects.filter(
-                django_models.Q(sender=self.user, receiver=other_user)
-                | django_models.Q(sender=other_user, receiver=self.user)
-            )
-            .select_related("sender")
-            .order_by("timestamp")[:50]
+        unread_messages = Message.objects.filter(
+            sender=other_user, receiver=self.user, is_read=False
         )
 
-        return [
-            {
-                "message": msg.content,
-                "sender": msg.sender.username,
-                "timestamp": msg.timestamp.isoformat(),
-                "message_id": msg.id,
-            }
-            for msg in messages
-        ]
+        message_ids = list(unread_messages.values_list("id", flat=True))
+        unread_messages.update(is_read=True)
+
+        return message_ids
+
+    @database_sync_to_async
+    def mark_specific_messages_read(self, message_ids):
+        try:
+            other_user = User.objects.get(username=self.other_username)
+        except User.DoesNotExist:
+            return []
+
+        updated = Message.objects.filter(
+            id__in=message_ids, sender=other_user, receiver=self.user, is_read=False
+        )
+
+        updated_ids = list(updated.values_list("id", flat=True))
+        updated.update(is_read=True)
+
+        return updated_ids

@@ -1,851 +1,1190 @@
 {% extends 'chat/base.html' %}
 
-{% block title %}
-  Chat with {{ other_user.username }}
-{% endblock %}
+{% block title %}Chat with {{ other_user.username }}{% endblock %}
 
 {% block extra_css %}
-  <style>
+<style>
     .chat-container {
-      background: white;
-      border-radius: 15px;
-      overflow: hidden;
-      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
-      display: flex;
-      flex-direction: column;
-      height: calc(100vh - 200px);
-      max-height: 700px;
+        background: white;
+        border-radius: 15px;
+        overflow: hidden;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        display: flex;
+        flex-direction: column;
+        height: calc(100vh - 200px);
+        max-height: 700px;
     }
     
     .chat-header {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
-      padding: 1.5rem;
-      display: flex;
-      align-items: center;
-      gap: 1rem;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
     }
     
     .chat-header .user-avatar {
-      width: 45px;
-      height: 45px;
-      background: rgba(255, 255, 255, 0.2);
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.3rem;
-      font-weight: bold;
-      position: relative;
+        width: 45px;
+        height: 45px;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.3rem;
+        font-weight: bold;
+        position: relative;
     }
     
     .online-status-dot {
-      position: absolute;
-      bottom: 2px;
-      right: 2px;
-      width: 12px;
-      height: 12px;
-      border-radius: 50%;
-      border: 2px solid white;
-      background: #9e9e9e;
-      transition: background 0.3s ease;
+        position: absolute;
+        bottom: 2px;
+        right: 2px;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        border: 2px solid white;
+        background: #9e9e9e;
+        transition: background 0.3s ease;
     }
     
     .online-status-dot.online {
-      background: #4caf50;
-      box-shadow: 0 0 8px rgba(76, 175, 80, 0.6);
-      animation: pulse 2s infinite;
-    }
-    
-    .online-status-dot.offline {
-      background: #9e9e9e;
+        background: #4caf50;
+        box-shadow: 0 0 8px rgba(76, 175, 80, 0.6);
+        animation: pulse 2s infinite;
     }
     
     @keyframes pulse {
-      0%,
-      100% {
-        box-shadow: 0 0 8px rgba(76, 175, 80, 0.6);
-      }
-      50% {
-        box-shadow: 0 0 12px rgba(76, 175, 80, 0.8);
-      }
+        0%, 100% { box-shadow: 0 0 8px rgba(76, 175, 80, 0.6); }
+        50% { box-shadow: 0 0 12px rgba(76, 175, 80, 0.8); }
     }
     
     .chat-header-info {
-      flex: 1;
+        flex: 1;
     }
     
     .chat-header h2 {
-      font-size: 1.3rem;
-      font-weight: 600;
-      margin-bottom: 0.2rem;
+        font-size: 1.3rem;
+        font-weight: 600;
+        margin-bottom: 0.2rem;
     }
     
     .user-status-text {
-      font-size: 0.85rem;
-      opacity: 0.9;
-      font-weight: 400;
+        font-size: 0.85rem;
+        opacity: 0.9;
+        font-weight: 400;
     }
     
     .connection-status {
-      padding: 0.4rem 0.8rem;
-      border-radius: 20px;
-      font-size: 0.85rem;
-      background: rgba(255, 255, 255, 0.2);
+        padding: 0.4rem 0.8rem;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        background: rgba(255, 255, 255, 0.2);
     }
     
     .connection-status.connected {
-      background: rgba(76, 175, 80, 0.3);
+        background: rgba(76, 175, 80, 0.3);
     }
     
     .connection-status.disconnected {
-      background: rgba(244, 67, 54, 0.3);
+        background: rgba(244, 67, 54, 0.3);
     }
     
     #chat-messages {
-      flex: 1;
-      padding: 1.5rem;
-      overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-      gap: 0.8rem;
-      background: #f8f9fa;
-      position: relative;
+        flex: 1;
+        padding: 1.5rem;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 0.8rem;
+        background: #f8f9fa;
+        position: relative;
     }
     
-    /* NEW: Loading indicator for pagination */
-    .load-more-indicator {
-      display: none;
-      text-align: center;
-      padding: 1rem;
-      color: #667eea;
-      font-size: 0.9rem;
-      font-weight: 500;
+    .load-more-indicator, .end-of-messages {
+        text-align: center;
+        padding: 1rem;
+        color: #999;
+        font-size: 0.85rem;
     }
     
     .load-more-indicator.active {
-      display: block;
-      animation: fadeIn 0.3s ease-in;
+        display: block;
+        color: #667eea;
+        font-weight: 500;
     }
     
     .load-more-spinner {
-      display: inline-block;
-      width: 20px;
-      height: 20px;
-      border: 3px solid rgba(102, 126, 234, 0.3);
-      border-radius: 50%;
-      border-top-color: #667eea;
-      animation: spin 0.8s linear infinite;
-      margin-right: 0.5rem;
-      vertical-align: middle;
+        display: inline-block;
+        width: 20px;
+        height: 20px;
+        border: 3px solid rgba(102, 126, 234, 0.3);
+        border-radius: 50%;
+        border-top-color: #667eea;
+        animation: spin 0.8s linear infinite;
+        margin-right: 0.5rem;
+        vertical-align: middle;
     }
     
     @keyframes spin {
-      to {
-        transform: rotate(360deg);
-      }
-    }
-    
-    /* NEW: End of messages indicator */
-    .end-of-messages {
-      text-align: center;
-      padding: 1rem;
-      color: #999;
-      font-size: 0.85rem;
-      font-style: italic;
+        to { transform: rotate(360deg); }
     }
     
     .message {
-      display: flex;
-      max-width: 70%;
-      animation: messageSlide 0.3s ease-out;
+        display: flex;
+        max-width: 70%;
+        animation: messageSlide 0.3s ease-out;
     }
     
     @keyframes messageSlide {
-      from {
-        opacity: 0;
-        transform: translateY(10px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
     }
     
     .message.sent {
-      align-self: flex-end;
+        align-self: flex-end;
     }
     
     .message.received {
-      align-self: flex-start;
+        align-self: flex-start;
     }
     
     .message-bubble {
-      padding: 0.8rem 1rem;
-      border-radius: 18px;
-      word-wrap: break-word;
+        padding: 0.8rem 1rem;
+        border-radius: 18px;
+        word-wrap: break-word;
     }
     
     .message.sent .message-bubble {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
-      border-bottom-right-radius: 4px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-bottom-right-radius: 4px;
     }
     
     .message.received .message-bubble {
-      background: white;
-      color: #333;
-      border-bottom-left-radius: 4px;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        background: white;
+        color: #333;
+        border-bottom-left-radius: 4px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    
+    /* NEW: Image message styles */
+    .message-image {
+        max-width: 300px;
+        max-height: 400px;
+        border-radius: 12px;
+        cursor: pointer;
+        transition: transform 0.2s;
+        display: block;
+    }
+    
+    .message-image:hover {
+        transform: scale(1.02);
+    }
+    
+    /* NEW: File attachment styles */
+    .file-attachment {
+        display: flex;
+        align-items: center;
+        gap: 0.8rem;
+        padding: 0.8rem;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+        margin-top: 0.5rem;
+    }
+    
+    .message.received .file-attachment {
+        background: #f5f5f5;
+    }
+    
+    .file-icon {
+        width: 40px;
+        height: 40px;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+    }
+    
+    .message.received .file-icon {
+        background: #e0e0e0;
+    }
+    
+    .file-info {
+        flex: 1;
+        min-width: 0;
+    }
+    
+    .file-name {
+        font-weight: 500;
+        font-size: 0.9rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    .file-size {
+        font-size: 0.75rem;
+        opacity: 0.7;
+    }
+    
+    .file-download {
+        padding: 0.4rem 0.8rem;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 6px;
+        font-size: 0.85rem;
+        text-decoration: none;
+        color: inherit;
+        transition: background 0.2s;
+    }
+    
+    .file-download:hover {
+        background: rgba(255, 255, 255, 0.3);
+    }
+    
+    .message.received .file-download {
+        background: #667eea;
+        color: white;
+    }
+    
+    .message.received .file-download:hover {
+        background: #5568d3;
     }
     
     .message-info {
-      font-size: 0.75rem;
-      opacity: 0.7;
-      margin-top: 0.3rem;
-      padding: 0 0.5rem;
+        font-size: 0.75rem;
+        opacity: 0.7;
+        margin-top: 0.3rem;
+        padding: 0 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.3rem;
     }
     
     .message.sent .message-info {
-      text-align: right;
+        justify-content: flex-end;
+    }
+    
+    .read-indicator {
+        display: inline-flex;
+        align-items: center;
+        gap: 2px;
+        margin-left: 0.3rem;
+    }
+    
+    .checkmark {
+        width: 14px;
+        height: 14px;
+    }
+    
+    .checkmark svg {
+        width: 100%;
+        height: 100%;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+    }
+    
+    .read-indicator.sent {
+        color: rgba(255, 255, 255, 0.7);
+    }
+    
+    .read-indicator.read {
+        color: #4caf50;
+    }
+    
+    .read-indicator.read .checkmark:first-child {
+        margin-left: -6px;
     }
     
     .typing-indicator {
-      display: none;
-      align-self: flex-start;
-      padding: 0.8rem 1rem;
-      background: white;
-      border-radius: 18px;
-      border-bottom-left-radius: 4px;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-      margin-bottom: 0.5rem;
-      animation: fadeIn 0.3s ease-in;
+        display: none;
+        align-self: flex-start;
+        padding: 0.8rem 1rem;
+        background: white;
+        border-radius: 18px;
+        border-bottom-left-radius: 4px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        margin-bottom: 0.5rem;
     }
     
     .typing-indicator.active {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-    
-    @keyframes fadeIn {
-      from {
-        opacity: 0;
-        transform: translateY(5px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
     }
     
     .typing-indicator-text {
-      color: #666;
-      font-size: 0.9rem;
-      font-style: italic;
+        color: #666;
+        font-size: 0.9rem;
+        font-style: italic;
     }
     
     .typing-dots {
-      display: flex;
-      gap: 3px;
+        display: flex;
+        gap: 3px;
     }
     
     .typing-dot {
-      width: 8px;
-      height: 8px;
-      background: #667eea;
-      border-radius: 50%;
-      animation: typingBounce 1.4s infinite ease-in-out;
+        width: 8px;
+        height: 8px;
+        background: #667eea;
+        border-radius: 50%;
+        animation: typingBounce 1.4s infinite ease-in-out;
     }
     
-    .typing-dot:nth-child(1) {
-      animation-delay: 0s;
-    }
-    
-    .typing-dot:nth-child(2) {
-      animation-delay: 0.2s;
-    }
-    
-    .typing-dot:nth-child(3) {
-      animation-delay: 0.4s;
-    }
+    .typing-dot:nth-child(1) { animation-delay: 0s; }
+    .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dot:nth-child(3) { animation-delay: 0.4s; }
     
     @keyframes typingBounce {
-      0%,
-      60%,
-      100% {
-        transform: translateY(0);
-        opacity: 0.7;
-      }
-      30% {
-        transform: translateY(-10px);
-        opacity: 1;
-      }
+        0%, 60%, 100% { transform: translateY(0); opacity: 0.7; }
+        30% { transform: translateY(-10px); opacity: 1; }
     }
     
     .chat-input-container {
-      padding: 1.5rem;
-      background: white;
-      border-top: 1px solid #e0e0e0;
+        padding: 1.5rem;
+        background: white;
+        border-top: 1px solid #e0e0e0;
+    }
+    
+    /* NEW: File upload preview */
+    .file-preview {
+        display: none;
+        padding: 0.8rem;
+        background: #f5f5f5;
+        border-radius: 8px;
+        margin-bottom: 0.8rem;
+        align-items: center;
+        gap: 0.8rem;
+    }
+    
+    .file-preview.active {
+        display: flex;
+    }
+    
+    .file-preview-icon {
+        width: 40px;
+        height: 40px;
+        background: #667eea;
+        color: white;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+    }
+    
+    .file-preview-info {
+        flex: 1;
+        min-width: 0;
+    }
+    
+    .file-preview-name {
+        font-weight: 500;
+        font-size: 0.9rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    .file-preview-size {
+        font-size: 0.75rem;
+        color: #666;
+    }
+    
+    .file-preview-remove {
+        padding: 0.4rem 0.8rem;
+        background: #f44336;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.85rem;
+    }
+    
+    .file-preview-remove:hover {
+        background: #d32f2f;
+    }
+    
+    /* NEW: Upload progress */
+    .upload-progress {
+        display: none;
+        padding: 0.8rem;
+        background: #e3f2fd;
+        border-radius: 8px;
+        margin-bottom: 0.8rem;
+    }
+    
+    .upload-progress.active {
+        display: block;
+    }
+    
+    .upload-progress-text {
+        font-size: 0.85rem;
+        color: #1976d2;
+        margin-bottom: 0.5rem;
+    }
+    
+    .upload-progress-bar {
+        height: 6px;
+        background: #bbdefb;
+        border-radius: 3px;
+        overflow: hidden;
+    }
+    
+    .upload-progress-fill {
+        height: 100%;
+        background: #1976d2;
+        transition: width 0.3s;
+        width: 0%;
     }
     
     .chat-input-form {
-      display: flex;
-      gap: 0.8rem;
+        display: flex;
+        gap: 0.8rem;
+        align-items: flex-end;
+    }
+    
+    /* NEW: File input button */
+    .file-input-label {
+        padding: 0.8rem;
+        background: #f5f5f5;
+        border-radius: 25px;
+        cursor: pointer;
+        transition: background 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 44px;
+    }
+    
+    .file-input-label:hover {
+        background: #e0e0e0;
+    }
+    
+    .file-input-label svg {
+        width: 20px;
+        height: 20px;
+        stroke: #666;
+        fill: none;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+    }
+    
+    #file-input {
+        display: none;
     }
     
     #message-input {
-      flex: 1;
-      padding: 0.8rem 1rem;
-      border: 2px solid #e0e0e0;
-      border-radius: 25px;
-      font-size: 1rem;
-      outline: none;
-      transition: border-color 0.3s;
+        flex: 1;
+        padding: 0.8rem 1rem;
+        border: 2px solid #e0e0e0;
+        border-radius: 25px;
+        font-size: 1rem;
+        outline: none;
+        transition: border-color 0.3s;
+        resize: none;
+        min-height: 44px;
+        max-height: 120px;
     }
     
     #message-input:focus {
-      border-color: #667eea;
+        border-color: #667eea;
     }
     
     #send-button {
-      padding: 0.8rem 2rem;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
-      border: none;
-      border-radius: 25px;
-      font-size: 1rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: transform 0.2s, box-shadow 0.2s;
+        padding: 0.8rem 2rem;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: 25px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: transform 0.2s, box-shadow 0.2s;
     }
     
     #send-button:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
     }
     
     #send-button:active {
-      transform: translateY(0);
+        transform: translateY(0);
     }
     
     #send-button:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-      transform: none;
-    }
-    
-    .loading {
-      text-align: center;
-      padding: 2rem;
-      color: #999;
+        opacity: 0.5;
+        cursor: not-allowed;
+        transform: none;
     }
     
     /* Scrollbar styling */
     #chat-messages::-webkit-scrollbar {
-      width: 6px;
+        width: 6px;
     }
     
     #chat-messages::-webkit-scrollbar-track {
-      background: #f1f1f1;
+        background: #f1f1f1;
     }
     
     #chat-messages::-webkit-scrollbar-thumb {
-      background: #888;
-      border-radius: 3px;
+        background: #888;
+        border-radius: 3px;
     }
     
     #chat-messages::-webkit-scrollbar-thumb:hover {
-      background: #555;
+        background: #555;
     }
-  </style>
+</style>
 {% endblock %}
 
 {% block content %}
-  <div class="chat-container">
+<div class="chat-container">
     <div class="chat-header">
-      <div class="user-avatar">
-        {{ other_user.username|first|upper }}
-        <span class="online-status-dot" id="online-status-indicator" title="Checking status..."></span>
-      </div>
-      <div class="chat-header-info">
-        <h2>{{ other_user.username }}</h2>
-        <div class="user-status-text" id="last-seen-text">Checking status...</div>
-      </div>
-      <span class="connection-status" id="connection-status">Connecting...</span>
-    </div>
-
-    <div id="chat-messages">
-      <!-- NEW: Loading indicator for pagination -->
-      <div class="load-more-indicator" id="load-more-indicator">
-        <span class="load-more-spinner"></span>
-        <span>Loading older messages...</span>
-      </div>
-
-      <div class="loading" id="initial-loading">Loading messages...</div>
-
-      <!-- Typing Indicator -->
-      <div class="typing-indicator" id="typing-indicator">
-        <span class="typing-indicator-text" id="typing-text">{{ other_user.username }} is typing</span>
-        <div class="typing-dots">
-          <span class="typing-dot"></span>
-          <span class="typing-dot"></span>
-          <span class="typing-dot"></span>
+        <div class="user-avatar">
+            {{ other_user.username|first|upper }}
+            <span class="online-status-dot" id="online-status-indicator"></span>
         </div>
-      </div>
+        <div class="chat-header-info">
+            <h2>{{ other_user.username }}</h2>
+            <div class="user-status-text" id="last-seen-text">Checking status...</div>
+        </div>
+        <span class="connection-status" id="connection-status">Connecting...</span>
     </div>
-
-    <div class="chat-input-container">
-      <form class="chat-input-form" id="chat-form">
-        <input type="text" id="message-input" placeholder="Type a message..." autocomplete="off" disabled />
-        <button type="submit" id="send-button" disabled>Send</button>
-      </form>
-    </div>
-  </div>
-
-  <script>
-    // Get username from template context
-    const currentUser = '{{ user.username }}'
-    const otherUser = '{{ username }}'
     
-    // WebSocket connection
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-    const wsUrl = `${protocol}//${window.location.host}/ws/chat/${otherUser}/`
-    let chatSocket = null
+    <div id="chat-messages">
+        <div class="load-more-indicator" id="load-more-indicator">
+            <span class="load-more-spinner"></span>
+            <span>Loading older messages...</span>
+        </div>
+        
+        <div class="loading" id="initial-loading">Loading messages...</div>
+        
+        <div class="typing-indicator" id="typing-indicator">
+            <span class="typing-indicator-text">{{ other_user.username }} is typing</span>
+            <div class="typing-dots">
+                <span class="typing-dot"></span>
+                <span class="typing-dot"></span>
+                <span class="typing-dot"></span>
+            </div>
+        </div>
+    </div>
+    
+    <div class="chat-input-container">
+        <!-- NEW: File preview -->
+        <div class="file-preview" id="file-preview">
+            <div class="file-preview-icon">📎</div>
+            <div class="file-preview-info">
+                <div class="file-preview-name" id="preview-filename"></div>
+                <div class="file-preview-size" id="preview-filesize"></div>
+            </div>
+            <button class="file-preview-remove" id="remove-file">Remove</button>
+        </div>
+        
+        <!-- NEW: Upload progress -->
+        <div class="upload-progress" id="upload-progress">
+            <div class="upload-progress-text">Uploading file...</div>
+            <div class="upload-progress-bar">
+                <div class="upload-progress-fill" id="progress-fill"></div>
+            </div>
+        </div>
+        
+        <form class="chat-input-form" id="chat-form">
+            <!-- NEW: File input -->
+            <label for="file-input" class="file-input-label" title="Attach file">
+                <svg viewBox="0 0 24 24">
+                    <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
+                </svg>
+            </label>
+            <input type="file" id="file-input" accept="image/*,.pdf,.doc,.docx,.txt,.zip">
+            
+            <input 
+                type="text" 
+                id="message-input" 
+                placeholder="Type a message..." 
+                autocomplete="off"
+                disabled
+            >
+            <button type="submit" id="send-button" disabled>Send</button>
+        </form>
+    </div>
+</div>
+
+<script>
+    const currentUser = "{{ user.username }}";
+    const otherUser = "{{ username }}";
+    const uploadUrl = "{% url 'chat:upload_file' username=username %}";
+    const csrfToken = "{{ csrf_token }}";
+    
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${protocol}//${window.location.host}/ws/chat/${otherUser}/`;
+    let chatSocket = null;
     
     // DOM elements
-    const messagesContainer = document.getElementById('chat-messages')
-    const messageInput = document.getElementById('message-input')
-    const sendButton = document.getElementById('send-button')
-    const chatForm = document.getElementById('chat-form')
-    const connectionStatus = document.getElementById('connection-status')
-    const onlineStatusIndicator = document.getElementById('online-status-indicator')
-    const lastSeenText = document.getElementById('last-seen-text')
-    const typingIndicator = document.getElementById('typing-indicator')
-    const loadMoreIndicator = document.getElementById('load-more-indicator')
-    const initialLoading = document.getElementById('initial-loading')
+    const messagesContainer = document.getElementById('chat-messages');
+    const messageInput = document.getElementById('message-input');
+    const sendButton = document.getElementById('send-button');
+    const chatForm = document.getElementById('chat-form');
+    const connectionStatus = document.getElementById('connection-status');
+    const onlineStatusIndicator = document.getElementById('online-status-indicator');
+    const lastSeenText = document.getElementById('last-seen-text');
+    const typingIndicator = document.getElementById('typing-indicator');
+    const loadMoreIndicator = document.getElementById('load-more-indicator');
+    const initialLoading = document.getElementById('initial-loading');
     
-    // Typing indicator state management
-    let typingTimer = null
-    let isCurrentlyTyping = false
-    const TYPING_TIMER_LENGTH = 3000
-    const TYPING_DEBOUNCE = 300
-    let typingDebounceTimer = null
+    // NEW: File upload elements
+    const fileInput = document.getElementById('file-input');
+    const filePreview = document.getElementById('file-preview');
+    const previewFilename = document.getElementById('preview-filename');
+    const previewFilesize = document.getElementById('preview-filesize');
+    const removeFileBtn = document.getElementById('remove-file');
+    const uploadProgress = document.getElementById('upload-progress');
+    const progressFill = document.getElementById('progress-fill');
     
-    // NEW: Pagination state management
-    let currentOffset = 0
-    let hasMoreMessages = true
-    let isLoadingMore = false
-    let isInitialLoad = true
-    let totalMessageCount = 0
-    const SCROLL_THRESHOLD = 100 // Pixels from top to trigger load
+    // State management
+    let typingTimer = null;
+    let isCurrentlyTyping = false;
+    const TYPING_TIMER_LENGTH = 3000;
+    
+    let currentOffset = 0;
+    let hasMoreMessages = true;
+    let isLoadingMore = false;
+    let isInitialLoad = true;
+    let totalMessageCount = 0;
+    const SCROLL_THRESHOLD = 100;
+    
+    const unreadMessageIds = new Set();
+    const intersectionObserver = createIntersectionObserver();
+    
+    // NEW: File upload state
+    let selectedFile = null;
     
     /**
      * Initialize WebSocket connection
      */
     function connectWebSocket() {
-      chatSocket = new WebSocket(wsUrl)
-    
-      chatSocket.onopen = function (e) {
-        console.log('WebSocket connection established')
-        updateConnectionStatus(true)
-        messageInput.disabled = false
-        sendButton.disabled = false
-      }
-    
-      chatSocket.onmessage = function (e) {
-        const data = JSON.parse(e.data)
-    
-        // Handle initial message history
-        if (data.type === 'message_history') {
-          handleInitialMessages(data)
-        }
-        // NEW: Handle paginated messages response
-        else if (data.type === 'load_more_response') {
-          handleLoadMoreResponse(data)
-        }
-        // Handle new messages
-        else if (data.type === 'message') {
-          displayMessage(data)
-          scrollToBottom()
-        }
-        // Handle user status updates
-        else if (data.type === 'user_status') {
-          updateUserStatus(data.username, data.is_online, data.last_seen)
-        }
-        // Handle typing indicator
-        else if (data.type === 'typing_indicator') {
-          handleTypingIndicator(data.username, data.is_typing)
-        }
-      }
-    
-      chatSocket.onclose = function (e) {
-        console.log('WebSocket connection closed')
-        updateConnectionStatus(false)
-        messageInput.disabled = true
-        sendButton.disabled = true
-        setTimeout(connectWebSocket, 3000)
-      }
-    
-      chatSocket.onerror = function (error) {
-        console.error('WebSocket error:', error)
-        updateConnectionStatus(false)
-      }
+        chatSocket = new WebSocket(wsUrl);
+        
+        chatSocket.onopen = function(e) {
+            console.log('WebSocket connection established');
+            updateConnectionStatus(true);
+            messageInput.disabled = false;
+            sendButton.disabled = false;
+        };
+        
+        chatSocket.onmessage = function(e) {
+            const data = JSON.parse(e.data);
+            
+            if (data.type === 'message_history') {
+                handleInitialMessages(data);
+            }
+            else if (data.type === 'load_more_response') {
+                handleLoadMoreResponse(data);
+            }
+            else if (data.type === 'message') {
+                displayMessage(data);
+                scrollToBottom();
+            }
+            else if (data.type === 'user_status') {
+                updateUserStatus(data.username, data.is_online, data.last_seen);
+            }
+            else if (data.type === 'typing_indicator') {
+                handleTypingIndicator(data.username, data.is_typing);
+            }
+            else if (data.type === 'read_receipt') {
+                handleReadReceipt(data.message_ids, data.read_by);
+            }
+        };
+        
+        chatSocket.onclose = function(e) {
+            console.log('WebSocket connection closed');
+            updateConnectionStatus(false);
+            messageInput.disabled = true;
+            sendButton.disabled = true;
+            setTimeout(connectWebSocket, 3000);
+        };
+        
+        chatSocket.onerror = function(error) {
+            console.error('WebSocket error:', error);
+            updateConnectionStatus(false);
+        };
     }
     
     /**
-     * NEW: Handle initial message history with pagination data
+     * NEW: Handle file selection
      */
+    fileInput.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            selectedFile = file;
+            previewFilename.textContent = file.name;
+            previewFilesize.textContent = formatFileSize(file.size);
+            filePreview.classList.add('active');
+        }
+    });
+    
+    /**
+     * NEW: Remove selected file
+     */
+    removeFileBtn.addEventListener('click', function() {
+        selectedFile = null;
+        fileInput.value = '';
+        filePreview.classList.remove('active');
+    });
+    
+    /**
+     * NEW: Upload file to server
+     */
+    async function uploadFile(file, messageText) {
+        const formData = new FormData();
+        formData.append('file', file);
+        if (messageText) {
+            formData.append('message', messageText);
+        }
+        
+        // Show progress
+        uploadProgress.classList.add('active');
+        progressFill.style.width = '0%';
+        
+        try {
+            const xhr = new XMLHttpRequest();
+            
+            // Track upload progress
+            xhr.upload.addEventListener('progress', function(e) {
+                if (e.lengthComputable) {
+                    const percentComplete = (e.loaded / e.total) * 100;
+                    progressFill.style.width = percentComplete + '%';
+                }
+            });
+            
+            // Handle completion
+            xhr.addEventListener('load', function() {
+                uploadProgress.classList.remove('active');
+                
+                if (xhr.status === 200) {
+                    const response = JSON.parse(xhr.responseText);
+                    
+                    // Broadcast file message via WebSocket
+                    if (chatSocket && chatSocket.readyState === WebSocket.OPEN) {
+                        chatSocket.send(JSON.stringify({
+                            'type': 'file_message',
+                            'message_id': response.message_id
+                        }));
+                    }
+                    
+                    // Clear file selection
+                    selectedFile = null;
+                    fileInput.value = '';
+                    filePreview.classList.remove('active');
+                } else {
+                    alert('Upload failed: ' + xhr.statusText);
+                }
+            });
+            
+            // Handle errors
+            xhr.addEventListener('error', function() {
+                uploadProgress.classList.remove('active');
+                alert('Upload failed. Please try again.');
+            });
+            
+            xhr.open('POST', uploadUrl);
+            xhr.setRequestHeader('X-CSRFToken', csrfToken);
+            xhr.send(formData);
+            
+        } catch (error) {
+            uploadProgress.classList.remove('active');
+            console.error('Upload error:', error);
+            alert('Upload failed. Please try again.');
+        }
+    }
+    
+    /**
+     * NEW: Format file size
+     */
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+    }
+    
+    /**
+     * NEW: Get file icon based on type
+     */
+    function getFileIcon(fileType) {
+        if (fileType.startsWith('image/')) return '🖼️';
+        if (fileType.includes('pdf')) return '📄';
+        if (fileType.includes('word') || fileType.includes('doc')) return '📝';
+        if (fileType.includes('zip') || fileType.includes('rar')) return '📦';
+        return '📎';
+    }
+    
+    /**
+     * Create intersection observer for read receipts
+     */
+    function createIntersectionObserver() {
+        const options = {
+            root: messagesContainer,
+            rootMargin: '0px',
+            threshold: 0.5
+        };
+        
+        return new IntersectionObserver((entries) => {
+            const visibleUnreadIds = [];
+            
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const messageId = parseInt(entry.target.dataset.messageId);
+                    const sender = entry.target.dataset.sender;
+                    
+                    if (sender === otherUser && unreadMessageIds.has(messageId)) {
+                        visibleUnreadIds.push(messageId);
+                        unreadMessageIds.delete(messageId);
+                    }
+                }
+            });
+            
+            if (visibleUnreadIds.length > 0) {
+                sendReadReceipt(visibleUnreadIds);
+            }
+        }, options);
+    }
+    
+    function sendReadReceipt(messageIds) {
+        if (chatSocket && chatSocket.readyState === WebSocket.OPEN) {
+            chatSocket.send(JSON.stringify({
+                'type': 'mark_as_read',
+                'message_ids': messageIds
+            }));
+        }
+    }
+    
+    function handleReadReceipt(messageIds, readBy) {
+        messageIds.forEach(messageId => {
+            const messageElement = document.querySelector(`[data-message-id="${messageId}"]`);
+            if (messageElement) {
+                updateReadIndicator(messageElement, true);
+            }
+        });
+    }
+    
+    function updateReadIndicator(messageElement, isRead) {
+        const readIndicator = messageElement.querySelector('.read-indicator');
+        if (readIndicator) {
+            if (isRead) {
+                readIndicator.classList.remove('sent');
+                readIndicator.classList.add('read');
+                readIndicator.innerHTML = createDoubleCheckmark();
+            } else {
+                readIndicator.classList.add('sent');
+                readIndicator.classList.remove('read');
+                readIndicator.innerHTML = createSingleCheckmark();
+            }
+        }
+    }
+    
+    function createSingleCheckmark() {
+        return `<span class="checkmark"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg></span>`;
+    }
+    
+    function createDoubleCheckmark() {
+        return `<span class="checkmark"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg></span><span class="checkmark"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg></span>`;
+    }
+    
     function handleInitialMessages(data) {
-      // Hide initial loading indicator
-      if (initialLoading) {
-        initialLoading.style.display = 'none'
-      }
-    
-      // Clear messages container but keep indicators
-      const indicators = [loadMoreIndicator, typingIndicator]
-      messagesContainer.innerHTML = ''
-      indicators.forEach((el) => messagesContainer.appendChild(el))
-    
-      // Update pagination state
-      currentOffset = data.offset || data.messages.length
-      hasMoreMessages = data.has_more || false
-      totalMessageCount = data.total_count || 0
-    
-      // Messages come in descending order (newest first), reverse for display
-      const messages = [...data.messages].reverse()
-      messages.forEach((msg) => displayMessage(msg, false)) // false = don't animate initial load
-    
-      // Scroll to bottom after initial load
-      isInitialLoad = false
-      scrollToBottom()
-    
-      // Show end indicator if no more messages
-      if (!hasMoreMessages && totalMessageCount > 0) {
-        showEndOfMessages()
-      }
-    
-      console.log(`Loaded ${messages.length} messages. Has more: ${hasMoreMessages}`)
+        if (initialLoading) initialLoading.style.display = 'none';
+        
+        const indicators = [loadMoreIndicator, typingIndicator];
+        messagesContainer.innerHTML = '';
+        indicators.forEach(el => messagesContainer.appendChild(el));
+        
+        currentOffset = data.offset || data.messages.length;
+        hasMoreMessages = data.has_more || false;
+        totalMessageCount = data.total_count || 0;
+        
+        const messages = [...data.messages].reverse();
+        messages.forEach(msg => {
+            displayMessage(msg, false);
+            if (msg.sender === otherUser && !msg.is_read) {
+                unreadMessageIds.add(msg.message_id);
+            }
+        });
+        
+        isInitialLoad = false;
+        scrollToBottom();
     }
     
-    /**
-     * NEW: Handle load more messages response
-     */
     function handleLoadMoreResponse(data) {
-      // Hide loading indicator
-      loadMoreIndicator.classList.remove('active')
-      isLoadingMore = false
-    
-      // Update pagination state
-      const previousOffset = currentOffset
-      currentOffset = data.offset
-      hasMoreMessages = data.has_more || false
-    
-      if (data.messages && data.messages.length > 0) {
-        // Save current scroll position
-        const previousScrollHeight = messagesContainer.scrollHeight
-        const previousScrollTop = messagesContainer.scrollTop
-    
-        // Messages come in descending order (newest first), reverse for display
-        const messages = [...data.messages].reverse()
-    
-        // Insert messages at the top (after load indicator)
-        messages.forEach((msg) => {
-          displayMessage(msg, false, true) // true = prepend
-        })
-    
-        // Restore scroll position (maintain user's view)
-        const newScrollHeight = messagesContainer.scrollHeight
-        messagesContainer.scrollTop = previousScrollTop + (newScrollHeight - previousScrollHeight)
-    
-        console.log(`Loaded ${messages.length} older messages. Has more: ${hasMoreMessages}`)
-      }
-    
-      // Show end indicator if no more messages
-      if (!hasMoreMessages) {
-        showEndOfMessages()
-      }
+        loadMoreIndicator.classList.remove('active');
+        isLoadingMore = false;
+        
+        currentOffset = data.offset;
+        hasMoreMessages = data.has_more || false;
+        
+        if (data.messages && data.messages.length > 0) {
+            const previousScrollHeight = messagesContainer.scrollHeight;
+            const previousScrollTop = messagesContainer.scrollTop;
+            
+            const messages = [...data.messages].reverse();
+            messages.forEach(msg => {
+                displayMessage(msg, false, true);
+                if (msg.sender === otherUser && !msg.is_read) {
+                    unreadMessageIds.add(msg.message_id);
+                }
+            });
+            
+            const newScrollHeight = messagesContainer.scrollHeight;
+            messagesContainer.scrollTop = previousScrollTop + (newScrollHeight - previousScrollHeight);
+        }
     }
     
-    /**
-     * NEW: Detect scroll to top and load more messages
-     */
     function handleScroll() {
-      // Don't load if already loading, no more messages, or initial load
-      if (isLoadingMore || !hasMoreMessages || isInitialLoad) {
-        return
-      }
-    
-      // Check if scrolled near the top
-      if (messagesContainer.scrollTop < SCROLL_THRESHOLD) {
-        loadMoreMessages()
-      }
+        if (isLoadingMore || !hasMoreMessages || isInitialLoad) return;
+        if (messagesContainer.scrollTop < SCROLL_THRESHOLD) {
+            loadMoreMessages();
+        }
     }
     
-    /**
-     * NEW: Request more messages from server
-     */
     function loadMoreMessages() {
-      if (isLoadingMore || !hasMoreMessages) {
-        return
-      }
-    
-      isLoadingMore = true
-      loadMoreIndicator.classList.add('active')
-    
-      // Send load more request
-      if (chatSocket && chatSocket.readyState === WebSocket.OPEN) {
-        chatSocket.send(
-          JSON.stringify({
-            type: 'load_more',
-            offset: currentOffset
-          })
-        )
-      }
+        if (isLoadingMore || !hasMoreMessages) return;
+        isLoadingMore = true;
+        loadMoreIndicator.classList.add('active');
+        
+        if (chatSocket && chatSocket.readyState === WebSocket.OPEN) {
+            chatSocket.send(JSON.stringify({
+                'type': 'load_more',
+                'offset': currentOffset
+            }));
+        }
     }
     
-    /**
-     * NEW: Show end of messages indicator
-     */
-    function showEndOfMessages() {
-      const endIndicator = document.createElement('div')
-      endIndicator.className = 'end-of-messages'
-      endIndicator.textContent = '— Beginning of conversation —'
-      endIndicator.id = 'end-of-messages'
-    
-      // Remove existing end indicator if present
-      const existing = document.getElementById('end-of-messages')
-      if (existing) {
-        existing.remove()
-      }
-    
-      // Insert at the top (after load indicator)
-      messagesContainer.insertBefore(endIndicator, loadMoreIndicator.nextSibling)
-    }
-    
-    /**
-     * Send typing status to server
-     */
     function sendTypingStatus(isTyping) {
-      if (chatSocket && chatSocket.readyState === WebSocket.OPEN) {
-        chatSocket.send(
-          JSON.stringify({
-            type: 'typing',
-            is_typing: isTyping
-          })
-        )
-      }
+        if (chatSocket && chatSocket.readyState === WebSocket.OPEN) {
+            chatSocket.send(JSON.stringify({
+                'type': 'typing',
+                'is_typing': isTyping
+            }));
+        }
     }
     
-    /**
-     * Handle input events to detect typing
-     */
     function handleInputTyping() {
-      clearTimeout(typingDebounceTimer)
-    
-      if (!isCurrentlyTyping) {
-        isCurrentlyTyping = true
-        sendTypingStatus(true)
-      }
-    
-      clearTimeout(typingTimer)
-      typingTimer = setTimeout(() => {
-        isCurrentlyTyping = false
-        sendTypingStatus(false)
-      }, TYPING_TIMER_LENGTH)
+        if (!isCurrentlyTyping) {
+            isCurrentlyTyping = true;
+            sendTypingStatus(true);
+        }
+        
+        clearTimeout(typingTimer);
+        typingTimer = setTimeout(() => {
+            isCurrentlyTyping = false;
+            sendTypingStatus(false);
+        }, TYPING_TIMER_LENGTH);
     }
     
-    /**
-     * Show/hide typing indicator for other user
-     */
     function handleTypingIndicator(username, isTyping) {
-      if (username !== otherUser) {
-        return
-      }
-    
-      if (isTyping) {
-        typingIndicator.classList.add('active')
-        scrollToBottom()
-      } else {
-        typingIndicator.classList.remove('active')
-      }
-    }
-    
-    /**
-     * Update user online/offline status in the UI
-     */
-    function updateUserStatus(username, isOnline, lastSeen) {
-      if (username !== otherUser) {
-        return
-      }
-    
-      if (onlineStatusIndicator) {
-        if (isOnline) {
-          onlineStatusIndicator.classList.add('online')
-          onlineStatusIndicator.classList.remove('offline')
-          onlineStatusIndicator.title = 'Online'
-    
-          if (lastSeenText) {
-            lastSeenText.textContent = 'Online'
-            lastSeenText.style.color = '#4caf50'
-          }
+        if (username !== otherUser) return;
+        
+        if (isTyping) {
+            typingIndicator.classList.add('active');
+            scrollToBottom();
         } else {
-          onlineStatusIndicator.classList.remove('online')
-          onlineStatusIndicator.classList.add('offline')
-          onlineStatusIndicator.title = 'Offline'
-    
-          if (lastSeenText && lastSeen) {
-            const lastSeenDate = new Date(lastSeen)
-            const timeAgo = getTimeAgo(lastSeenDate)
-            lastSeenText.textContent = `Last seen ${timeAgo}`
-            lastSeenText.style.color = '#e0e0e0'
-          }
+            typingIndicator.classList.remove('active');
         }
-      }
     }
     
-    /**
-     * Calculate "time ago" for last seen
-     */
+    function updateUserStatus(username, isOnline, lastSeen) {
+        if (username !== otherUser) return;
+        
+        if (onlineStatusIndicator) {
+            if (isOnline) {
+                onlineStatusIndicator.classList.add('online');
+                onlineStatusIndicator.classList.remove('offline');
+                lastSeenText.textContent = 'Online';
+                lastSeenText.style.color = '#4caf50';
+            } else {
+                onlineStatusIndicator.classList.remove('online');
+                onlineStatusIndicator.classList.add('offline');
+                if (lastSeen) {
+                    const lastSeenDate = new Date(lastSeen);
+                    lastSeenText.textContent = `Last seen ${getTimeAgo(lastSeenDate)}`;
+                    lastSeenText.style.color = '#e0e0e0';
+                }
+            }
+        }
+    }
+    
     function getTimeAgo(date) {
-      const seconds = Math.floor((new Date() - date) / 1000)
-    
-      const intervals = {
-        year: 31536000,
-        month: 2592000,
-        week: 604800,
-        day: 86400,
-        hour: 3600,
-        minute: 60
-      }
-    
-      for (const [unit, secondsInUnit] of Object.entries(intervals)) {
-        const interval = Math.floor(secondsInUnit <= seconds ? seconds / secondsInUnit : 0)
-        if (interval >= 1) {
-          return `${interval} ${unit}${interval > 1 ? 's' : ''} ago`
+        const seconds = Math.floor((new Date() - date) / 1000);
+        const intervals = { year: 31536000, month: 2592000, week: 604800, day: 86400, hour: 3600, minute: 60 };
+        
+        for (const [unit, secondsInUnit] of Object.entries(intervals)) {
+            const interval = Math.floor(seconds / secondsInUnit);
+            if (interval >= 1) {
+                return `${interval} ${unit}${interval > 1 ? 's' : ''} ago`;
+            }
         }
-      }
-    
-      return 'just now'
+        return 'just now';
     }
     
     /**
-     * Display a message in the chat
-     * @param {boolean} animate - Whether to animate the message entrance
-     * @param {boolean} prepend - Whether to add at top (for pagination) or bottom (for new messages)
+     * Display a message in the chat (UPDATED for files)
      */
     function displayMessage(data, animate = true, prepend = false) {
-      const messageDiv = document.createElement('div')
-      const isSent = data.sender === currentUser
-      messageDiv.className = `message ${isSent ? 'sent' : 'received'}`
-    
-      // Don't animate initial load or paginated messages
-      if (!animate) {
-        messageDiv.style.animation = 'none'
-      }
-    
-      const timestamp = new Date(data.timestamp)
-      const timeString = timestamp.toLocaleTimeString([], {
-        hour: '2-digit',
-        minute: '2-digit'
-      })
-    
-      messageDiv.innerHTML = `
-                <div>
-                    <div class="message-bubble">
-                        ${escapeHtml(data.message)}
+        const messageDiv = document.createElement('div');
+        const isSent = data.sender === currentUser;
+        messageDiv.className = `message ${isSent ? 'sent' : 'received'}`;
+        messageDiv.dataset.messageId = data.message_id;
+        messageDiv.dataset.sender = data.sender;
+        
+        if (!animate) messageDiv.style.animation = 'none';
+        
+        const timestamp = new Date(data.timestamp);
+        const timeString = timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        
+        let messageContent = '';
+        
+        // NEW: Handle file attachments
+        if (data.has_file) {
+            if (data.is_image) {
+                // Display image
+                messageContent = `<img src="${data.file_url}" alt="${escapeHtml(data.file_name)}" class="message-image" onclick="window.open('${data.file_url}', '_blank')">`;
+                if (data.message) {
+                    messageContent += `<div style="margin-top: 0.5rem;">${escapeHtml(data.message)}</div>`;
+                }
+            } else {
+                // Display file attachment
+                const fileIcon = getFileIcon(data.file_type);
+                const downloadUrl = `/download/${data.message_id}/`;
+                messageContent = `
+                    <div class="file-attachment">
+                        <div class="file-icon">${fileIcon}</div>
+                        <div class="file-info">
+                            <div class="file-name">${escapeHtml(data.file_name)}</div>
+                            <div class="file-size">${formatFileSize(data.file_size)}</div>
+                        </div>
+                        <a href="${downloadUrl}" class="file-download" download>Download</a>
                     </div>
-                    <div class="message-info">${timeString}</div>
+                `;
+                if (data.message) {
+                    messageContent = `${escapeHtml(data.message)}` + messageContent;
+                }
+            }
+        } else {
+            messageContent = escapeHtml(data.message);
+        }
+        
+        let readIndicatorHtml = '';
+        if (isSent) {
+            const isRead = data.is_read || false;
+            const checkmarks = isRead ? createDoubleCheckmark() : createSingleCheckmark();
+            const readClass = isRead ? 'read' : 'sent';
+            readIndicatorHtml = `<span class="read-indicator ${readClass}">${checkmarks}</span>`;
+        }
+        
+        messageDiv.innerHTML = `
+            <div>
+                <div class="message-bubble">
+                    ${messageContent}
                 </div>
-            `
-    
-      if (prepend) {
-        // Insert after the end-of-messages or load-more indicator
-        const endIndicator = document.getElementById('end-of-messages')
-        const insertAfter = endIndicator || loadMoreIndicator
-        messagesContainer.insertBefore(messageDiv, insertAfter.nextSibling)
-      } else {
-        // Insert before typing indicator (normal flow)
-        messagesContainer.insertBefore(messageDiv, typingIndicator)
-      }
+                <div class="message-info">
+                    <span>${timeString}</span>
+                    ${readIndicatorHtml}
+                </div>
+            </div>
+        `;
+        
+        if (prepend) {
+            const endIndicator = document.getElementById('end-of-messages');
+            const insertAfter = endIndicator || loadMoreIndicator;
+            messagesContainer.insertBefore(messageDiv, insertAfter.nextSibling);
+        } else {
+            messagesContainer.insertBefore(messageDiv, typingIndicator);
+        }
+        
+        if (!isSent && !data.is_read) {
+            intersectionObserver.observe(messageDiv);
+        }
     }
     
     /**
-     * Send message to server
+     * Send message or file
      */
     function sendMessage(e) {
-      e.preventDefault()
-    
-      const message = messageInput.value.trim()
-      if (message && chatSocket.readyState === WebSocket.OPEN) {
-        chatSocket.send(
-          JSON.stringify({
-            type: 'message',
-            message: message
-          })
-        )
-    
-        messageInput.value = ''
-        messageInput.focus()
-    
-        clearTimeout(typingTimer)
-        if (isCurrentlyTyping) {
-          isCurrentlyTyping = false
-          sendTypingStatus(false)
+        e.preventDefault();
+        
+        const message = messageInput.value.trim();
+        
+        // NEW: Handle file upload
+        if (selectedFile) {
+            uploadFile(selectedFile, message);
+            messageInput.value = '';
         }
-      }
+        // Handle text message
+        else if (message && chatSocket.readyState === WebSocket.OPEN) {
+            chatSocket.send(JSON.stringify({
+                'type': 'message',
+                'message': message
+            }));
+            messageInput.value = '';
+        }
+        
+        messageInput.focus();
+        
+        clearTimeout(typingTimer);
+        if (isCurrentlyTyping) {
+            isCurrentlyTyping = false;
+            sendTypingStatus(false);
+        }
     }
     
-    /**
-     * Update connection status indicator
-     */
     function updateConnectionStatus(isConnected) {
-      if (isConnected) {
-        connectionStatus.textContent = 'Connected'
-        connectionStatus.className = 'connection-status connected'
-      } else {
-        connectionStatus.textContent = 'Disconnected'
-        connectionStatus.className = 'connection-status disconnected'
-      }
+        if (isConnected) {
+            connectionStatus.textContent = 'Connected';
+            connectionStatus.className = 'connection-status connected';
+        } else {
+            connectionStatus.textContent = 'Disconnected';
+            connectionStatus.className = 'connection-status disconnected';
+        }
     }
     
-    /**
-     * Scroll chat to bottom
-     */
     function scrollToBottom() {
-      messagesContainer.scrollTop = messagesContainer.scrollHeight
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
     }
     
-    /**
-     * Escape HTML to prevent XSS
-     */
     function escapeHtml(text) {
-      const div = document.createElement('div')
-      div.textContent = text
-      return div.innerHTML
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
     
     // Event listeners
-    chatForm.addEventListener('submit', sendMessage)
-    messageInput.addEventListener('input', handleInputTyping)
-    messageInput.addEventListener('keypress', function (e) {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault()
-        sendMessage(e)
-      }
-    })
-    messageInput.addEventListener('blur', function () {
-      clearTimeout(typingTimer)
-      if (isCurrentlyTyping) {
-        isCurrentlyTyping = false
-        sendTypingStatus(false)
-      }
-    })
+    chatForm.addEventListener('submit', sendMessage);
+    messageInput.addEventListener('input', handleInputTyping);
+    messageInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage(e);
+        }
+    });
+    messageInput.addEventListener('blur', function() {
+        clearTimeout(typingTimer);
+        if (isCurrentlyTyping) {
+            isCurrentlyTyping = false;
+            sendTypingStatus(false);
+        }
+    });
     
-    // NEW: Add scroll event listener for infinite scroll
-    messagesContainer.addEventListener('scroll', handleScroll)
+    messagesContainer.addEventListener('scroll', handleScroll);
     
-    // Initialize WebSocket connection
-    connectWebSocket()
-  </script>
+    // Initialize
+    connectWebSocket();
+</script>
 {% endblock %}
