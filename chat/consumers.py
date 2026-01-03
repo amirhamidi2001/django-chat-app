@@ -4,25 +4,20 @@ from channels.db import database_sync_to_async
 from django.contrib.auth.models import User
 from django.utils import timezone
 from django.db import models as django_models
-from .models import Message, UserStatus
+from .models import Message, UserStatus, SecurityLog
+import uuid
 
 
 class ChatConsumer(AsyncWebsocketConsumer):
     """
-    Asynchronous WebSocket consumer for handling real-time chat with:
-    - Status tracking (Phase 1)
-    - Typing indicators (Phase 2)
-    - Message pagination (Phase 3)
-    - Read receipts (Phase 4)
-    - Media support (Phase 5)
+    Asynchronous WebSocket consumer with enhanced security validation
     """
 
     MESSAGES_PER_PAGE = 20
+    MAX_MESSAGE_LENGTH = 5000  # NEW: Character limit for messages
 
     async def connect(self):
-        """
-        Called when WebSocket connection is established
-        """
+        """Called when WebSocket connection is established"""
         self.user = self.scope["user"]
 
         if not self.user.is_authenticated:
@@ -30,6 +25,11 @@ class ChatConsumer(AsyncWebsocketConsumer):
             return
 
         self.other_username = self.scope["url_route"]["kwargs"]["username"]
+
+        # NEW: Prevent chatting with yourself
+        if self.other_username == self.user.username:
+            await self.close()
+            return
 
         other_user_exists = await self.check_user_exists(self.other_username)
         if not other_user_exists:
@@ -66,9 +66,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         await self.send_initial_messages()
 
     async def disconnect(self, close_code):
-        """
-        Called when WebSocket connection is closed
-        """
+        """Called when WebSocket connection is closed"""
         if hasattr(self, "room_group_name"):
             await self.set_user_offline(self.user)
             await self.broadcast_status_change(self.user.username, False)
@@ -89,35 +87,64 @@ class ChatConsumer(AsyncWebsocketConsumer):
     async def receive(self, text_data):
         """
         Called when a message is received from WebSocket
+        ENHANCED: with validation and security checks
         """
-        data = json.loads(text_data)
+        try:
+            data = json.loads(text_data)
+        except json.JSONDecodeError:
+            # NEW: Invalid JSON - ignore silently
+            return
+
         message_type = data.get("type", "message")
 
         # Handle regular chat messages
         if message_type == "message":
             message_content = data.get("message", "")
 
+            # NEW: Validate message content
             if not message_content.strip():
                 return
 
+            if len(message_content) > self.MAX_MESSAGE_LENGTH:
+                await self.send(
+                    text_data=json.dumps(
+                        {
+                            "type": "error",
+                            "message": f"Message too long (max {self.MAX_MESSAGE_LENGTH} characters)",
+                        }
+                    )
+                )
+                return
+
+            # NEW: Security validation - ensure sender is current user
+            # This prevents malicious clients from spoofing sender
             message = await self.save_message(message_content)
 
-            await self.channel_layer.group_send(
-                self.room_group_name,
-                {
-                    "type": "chat_message",
-                    "message": message_content,
-                    "sender": self.user.username,
-                    "timestamp": message.timestamp.isoformat(),
-                    "message_id": message.id,
-                    "is_read": False,
-                    "has_file": False,  # NEW
-                },
-            )
+            if message:
+                await self.channel_layer.group_send(
+                    self.room_group_name,
+                    {
+                        "type": "chat_message",
+                        "message": message_content,
+                        "sender": self.user.username,
+                        "timestamp": message.timestamp.isoformat(),
+                        "message_id": str(message.id),  # NEW: UUID as string
+                        "is_read": False,
+                        "has_file": False,
+                    },
+                )
 
-        # NEW: Handle file message broadcast (after HTTP upload)
+        # Handle file message broadcast
         elif message_type == "file_message":
-            message_id = data.get("message_id")
+            message_id_str = data.get("message_id")
+
+            # NEW: Validate UUID format
+            try:
+                message_id = uuid.UUID(message_id_str)
+            except (ValueError, AttributeError):
+                return
+
+            # NEW: Verify message belongs to current user
             message_data = await self.get_message_data(message_id)
 
             if message_data:
@@ -128,7 +155,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                         "message": message_data["content"],
                         "sender": self.user.username,
                         "timestamp": message_data["timestamp"],
-                        "message_id": message_id,
+                        "message_id": str(message_id),
                         "is_read": False,
                         "has_file": True,
                         "file_url": message_data["file_url"],
@@ -155,20 +182,32 @@ class ChatConsumer(AsyncWebsocketConsumer):
         # Handle load more messages
         elif message_type == "load_more":
             offset = data.get("offset", 0)
+
+            # NEW: Validate offset
+            if not isinstance(offset, int) or offset < 0:
+                return
+
             await self.send_paginated_messages(offset)
 
         # Handle mark as read
         elif message_type == "mark_as_read":
             message_ids = data.get("message_ids", [])
-            if message_ids:
-                updated_ids = await self.mark_specific_messages_read(message_ids)
+
+            # NEW: Validate message IDs are UUIDs
+            validated_ids = []
+            for mid in message_ids:
+                try:
+                    validated_ids.append(uuid.UUID(str(mid)))
+                except (ValueError, AttributeError):
+                    continue
+
+            if validated_ids:
+                updated_ids = await self.mark_specific_messages_read(validated_ids)
                 if updated_ids:
                     await self.broadcast_read_receipt(updated_ids)
 
     async def chat_message(self, event):
-        """
-        Handler for chat messages sent to the group
-        """
+        """Handler for chat messages sent to the group"""
         message_data = {
             "type": "message",
             "message": event["message"],
@@ -179,7 +218,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
             "has_file": event.get("has_file", False),
         }
 
-        # NEW: Add file data if present
         if event.get("has_file"):
             message_data.update(
                 {
@@ -194,9 +232,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         await self.send(text_data=json.dumps(message_data))
 
     async def status_change(self, event):
-        """
-        Handler for status change events
-        """
+        """Handler for status change events"""
         await self.send(
             text_data=json.dumps(
                 {
@@ -209,9 +245,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         )
 
     async def typing_indicator(self, event):
-        """
-        Handler for typing indicator events
-        """
+        """Handler for typing indicator events"""
         if event["username"] != self.user.username:
             await self.send(
                 text_data=json.dumps(
@@ -224,24 +258,22 @@ class ChatConsumer(AsyncWebsocketConsumer):
             )
 
     async def read_receipt(self, event):
-        """
-        Handler for read receipt events
-        """
+        """Handler for read receipt events"""
         if event["sender_username"] == self.user.username:
             await self.send(
                 text_data=json.dumps(
                     {
                         "type": "read_receipt",
-                        "message_ids": event["message_ids"],
+                        "message_ids": [
+                            str(mid) for mid in event["message_ids"]
+                        ],  # NEW: UUIDs as strings
                         "read_by": event["read_by"],
                     }
                 )
             )
 
     async def broadcast_status_change(self, username, is_online):
-        """
-        Broadcast user status change to the room group
-        """
+        """Broadcast user status change to the room group"""
         last_seen = None
         if not is_online:
             user_status = await self.get_user_status(username)
@@ -258,9 +290,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         )
 
     async def broadcast_read_receipt(self, message_ids):
-        """
-        Broadcast read receipt to the room group
-        """
+        """Broadcast read receipt to the room group"""
         await self.channel_layer.group_send(
             self.room_group_name,
             {
@@ -276,9 +306,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
     # ========================================================================
 
     async def send_initial_messages(self):
-        """
-        Send initial batch of messages with pagination metadata
-        """
+        """Send initial batch of messages"""
         messages_data = await self.get_paginated_messages(offset=0)
 
         await self.send(
@@ -294,9 +322,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         )
 
     async def send_paginated_messages(self, offset):
-        """
-        Send a batch of older messages for infinite scroll
-        """
+        """Send a batch of older messages"""
         messages_data = await self.get_paginated_messages(offset)
 
         await self.send(
@@ -353,18 +379,39 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def save_message(self, content):
-        receiver = User.objects.get(username=self.other_username)
-        return Message.objects.create(
-            sender=self.user, receiver=receiver, content=content
-        )
+        """
+        NEW: Enhanced with validation
+        """
+        try:
+            receiver = User.objects.get(username=self.other_username)
+
+            # Security: Ensure sender is current user (prevent spoofing)
+            message = Message.objects.create(
+                sender=self.user, receiver=receiver, content=content
+            )
+
+            # Log message send
+            SecurityLog.objects.create(
+                user=self.user,
+                event_type="message_send",
+                message=message,
+                description=f"Sent message to {receiver.username}",
+            )
+
+            return message
+        except User.DoesNotExist:
+            return None
 
     @database_sync_to_async
     def get_message_data(self, message_id):
         """
-        NEW: Get message data including file info
+        NEW: Enhanced with security validation
         """
         try:
-            message = Message.objects.get(id=message_id, sender=self.user)
+            # Security: Only return message if sender is current user
+            message = Message.objects.get(
+                id=message_id, sender=self.user, deleted=False
+            )
             return {
                 "content": message.content,
                 "timestamp": message.timestamp.isoformat(),
@@ -379,10 +426,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def get_paginated_messages(self, offset=0):
-        """
-        Retrieve paginated message history
-        NEW: Includes file metadata
-        """
+        """Retrieve paginated message history"""
         try:
             other_user = User.objects.get(username=self.other_username)
         except User.DoesNotExist:
@@ -393,9 +437,11 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 "offset": offset,
             }
 
+        # NEW: Exclude soft-deleted messages
         total_count = Message.objects.filter(
             django_models.Q(sender=self.user, receiver=other_user)
-            | django_models.Q(sender=other_user, receiver=self.user)
+            | django_models.Q(sender=other_user, receiver=self.user),
+            deleted=False,
         ).count()
 
         has_more = (offset + self.MESSAGES_PER_PAGE) < total_count
@@ -403,7 +449,8 @@ class ChatConsumer(AsyncWebsocketConsumer):
         messages = (
             Message.objects.filter(
                 django_models.Q(sender=self.user, receiver=other_user)
-                | django_models.Q(sender=other_user, receiver=self.user)
+                | django_models.Q(sender=other_user, receiver=self.user),
+                deleted=False,
             )
             .select_related("sender")
             .order_by("-timestamp")[offset : offset + self.MESSAGES_PER_PAGE]
@@ -415,12 +462,11 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 "message": msg.content,
                 "sender": msg.sender.username,
                 "timestamp": msg.timestamp.isoformat(),
-                "message_id": msg.id,
+                "message_id": str(msg.id),  # NEW: UUID as string
                 "is_read": msg.is_read,
                 "has_file": bool(msg.file),
             }
 
-            # NEW: Add file metadata if present
             if msg.file:
                 msg_data.update(
                     {
@@ -449,7 +495,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
             return []
 
         unread_messages = Message.objects.filter(
-            sender=other_user, receiver=self.user, is_read=False
+            sender=other_user, receiver=self.user, is_read=False, deleted=False  # NEW
         )
 
         message_ids = list(unread_messages.values_list("id", flat=True))
@@ -459,13 +505,18 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def mark_specific_messages_read(self, message_ids):
+        """NEW: Enhanced with UUID validation"""
         try:
             other_user = User.objects.get(username=self.other_username)
         except User.DoesNotExist:
             return []
 
         updated = Message.objects.filter(
-            id__in=message_ids, sender=other_user, receiver=self.user, is_read=False
+            id__in=message_ids,
+            sender=other_user,
+            receiver=self.user,
+            is_read=False,
+            deleted=False,  # NEW
         )
 
         updated_ids = list(updated.values_list("id", flat=True))
