@@ -5,86 +5,101 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>
       {% block title %}
-        Django Chat
+        Chatify
       {% endblock %}
     </title>
-    <style>
-      * {
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- FontAwesome CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+
+    <!-- Custom Tailwind configuration for glassmorphism -->
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            backdropBlur: {
+              xs: '2px'
+            }
+          }
+        }
       }
-      
-      body {
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        min-height: 100vh;
-        display: flex;
-        flex-direction: column;
-      }
-      
-      .navbar {
-        background: rgba(255, 255, 255, 0.95);
-        padding: 1rem 2rem;
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-      }
-      
-      .navbar-content {
-        max-width: 1200px;
-        margin: 0 auto;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-      }
-      
-      .navbar h1 {
-        color: #667eea;
-        font-size: 1.5rem;
-      }
-      
-      .navbar .user-info {
-        color: #555;
-      }
-      
-      .navbar a {
-        color: #667eea;
-        text-decoration: none;
-        margin-left: 1rem;
-        padding: 0.5rem 1rem;
-        border-radius: 5px;
-        transition: background 0.3s;
-      }
-      
-      .navbar a:hover {
-        background: #f0f0f0;
-      }
-      
-      .container {
-        flex: 1;
-        max-width: 1200px;
-        width: 100%;
-        margin: 2rem auto;
-        padding: 0 1rem;
-      }
-    </style>
+    </script>
+
     {% block extra_css %}
+
     {% endblock %}
   </head>
-  <body>
-    <nav class="navbar">
-      <div class="navbar-content">
-        <h1>💬 Django Chat</h1>
-        <div>
-          <span class="user-info">Welcome, <strong>{{ user.username }}</strong></span>
-          <a href="{% url 'chat:index' %}">Users</a>
-          <a href="{% url 'logout' %}">Logout</a>
+  <body class="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-950 to-black">
+    <!-- Sticky Navbar with Glassmorphism Effect -->
+    <nav class="sticky top-0 z-50 bg-black/10 backdrop-blur-md border-b border-black/20 shadow-lg">
+      <div class="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between items-center h-16">
+          <!-- Logo/Brand -->
+          <div class="flex items-center space-x-3">
+            <div class="bg-black/20 p-2 rounded-lg">
+              <i class="fas fa-comments text-white text-xl"></i>
+            </div>
+            <h1 class="text-white text-xl font-bold tracking-tight">Chatify</h1>
+          </div>
+
+          <!-- User Menu -->
+          <div class="flex items-center space-x-4">
+            {% if user.is_authenticated %}
+              <div class="hidden md:flex items-center space-x-3 text-white/90 bg-black/10 px-4 py-2 rounded-full">
+                <i class="fas fa-user-circle text-lg"></i>
+                <span class="font-medium">{{ user.username }}</span>
+              </div>
+
+              <a href="{% url 'chat:index' %}" class="text-white hover:text-white/80 transition-colors duration-200 px-3 py-2 rounded-md text-sm font-medium hover:bg-black/10">
+                <i class="fas fa-users mr-1"></i>
+                <span class="hidden sm:inline">Users</span>
+              </a>
+
+              <a href="{% url 'logout' %}" class="bg-black/20 hover:bg-black/30 text-white px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 flex items-center space-x-2">
+                <i class="fas fa-sign-out-alt"></i>
+                <span class="hidden sm:inline">Logout</span>
+              </a>
+
+              <!-- Mobile User Menu -->
+              <div class="md:hidden flex items-center">
+                <div class="relative group">
+                  <button class="flex items-center justify-center w-10 h-10 rounded-full bg-black/20 text-white"><i class="fas fa-user"></i></button>
+                  <div class="absolute right-0 mt-2 w-48 bg-black/90 backdrop-blur-sm rounded-lg shadow-lg py-1 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
+                    <div class="px-4 py-2 border-b">
+                      <p class="text-sm text-gray-700 font-medium">{{ user.username }}</p>
+                    </div>
+                    <a href="{% url 'chat:index' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"><i class="fas fa-users mr-2"></i>Users</a>
+                    <a href="{% url 'logout' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"><i class="fas fa-sign-out-alt mr-2"></i>Logout</a>
+                  </div>
+                </div>
+              </div>
+            {% endif %}
+          </div>
         </div>
       </div>
     </nav>
 
-    <div class="container">
-      {% block content %}
-      {% endblock %}
-    </div>
+    <!-- Main Content Container -->
+    <main class="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div class="bg-black/10 backdrop-blur-sm rounded-2xl shadow-2xl border border-white/20 p-6 md:p-8">
+        {% block content %}
+
+        {% endblock %}
+      </div>
+    </main>
+
+    <!-- Optional: Footer -->
+    <footer class="mt-auto py-4 px-4 text-center text-white/70 text-sm">
+      <p>
+        ©{% now 'Y' %}Chatify. All rights reserved.
+      </p>
+    </footer>
+
+    {% block extra_js %}
+
+    {% endblock %}
   </body>
 </html>

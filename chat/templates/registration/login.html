@@ -3,116 +3,189 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Login - Django Chat</title>
-    <style>
-      * {
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
+    <title>Login - Chatify</title>
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- FontAwesome CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            animation: {
+              gradient: 'gradient 8s linear infinite',
+              float: 'float 6s ease-in-out infinite'
+            },
+            keyframes: {
+              gradient: {
+                '0%, 100%': {
+                  'background-size': '200% 200%',
+                  'background-position': 'left center'
+                },
+                '50%': {
+                  'background-size': '200% 200%',
+                  'background-position': 'right center'
+                }
+              },
+              float: {
+                '0%, 100%': { transform: 'translateY(0)' },
+                '50%': { transform: 'translateY(-10px)' }
+              }
+            }
+          }
+        }
       }
-      
-      body {
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        min-height: 100vh;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 1rem;
-      }
-      
-      .login-container {
-        background: white;
-        padding: 3rem;
-        border-radius: 15px;
-        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-        width: 100%;
-        max-width: 400px;
-      }
-      
-      .login-container h2 {
-        color: #333;
-        margin-bottom: 2rem;
-        text-align: center;
-        font-size: 2rem;
-      }
-      
-      .form-group {
-        margin-bottom: 1.5rem;
-      }
-      
-      .form-group label {
-        display: block;
-        margin-bottom: 0.5rem;
-        color: #555;
-        font-weight: 500;
-      }
-      
-      .form-group input {
-        width: 100%;
-        padding: 0.8rem;
-        border: 2px solid #e0e0e0;
-        border-radius: 8px;
-        font-size: 1rem;
-        transition: border-color 0.3s;
-      }
-      
-      .form-group input:focus {
-        outline: none;
-        border-color: #667eea;
-      }
-      
-      .btn-login {
-        width: 100%;
-        padding: 1rem;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        border: none;
-        border-radius: 8px;
-        font-size: 1rem;
-        font-weight: 600;
-        cursor: pointer;
-        transition: transform 0.2s, box-shadow 0.2s;
-      }
-      
-      .btn-login:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
-      }
-      
-      .error-message {
-        background: #fee;
-        color: #c33;
-        padding: 0.8rem;
-        border-radius: 8px;
-        margin-bottom: 1rem;
-      }
-    </style>
+    </script>
   </head>
-  <body>
-    <div class="login-container">
-      <h2>💬 Django Chat</h2>
-
-      {% if form.errors %}
-        <div class="error-message">Invalid username or password.</div>
-      {% endif %}
-
-      <form method="post">
-        {% csrf_token %}
-        <div class="form-group">
-          <label for="id_username">Username</label>
-          <input type="text" name="username" id="id_username" required autofocus />
-        </div>
-
-        <div class="form-group">
-          <label for="id_password">Password</label>
-          <input type="password" name="password" id="id_password" required />
-        </div>
-
-        <button type="submit" class="btn-login">Login</button>
-
-        <input type="hidden" name="next" value="{{ next }}" />
-      </form>
+  <body class="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-950 to-black animate-gradient">
+    <!-- Animated Background Elements -->
+    <div class="fixed inset-0 overflow-hidden pointer-events-none">
+      <div class="absolute -top-40 -right-40 w-80 h-80 bg-purple-300/20 rounded-full blur-3xl animate-float"></div>
+      <div class="absolute -bottom-40 -left-40 w-80 h-80 bg-fuchsia-300/20 rounded-full blur-3xl animate-float" style="animation-delay: 2s"></div>
+      <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-indigo-300/10 rounded-full blur-3xl animate-float" style="animation-delay: 4s"></div>
     </div>
+
+    <div class="min-h-screen flex items-center justify-center p-4 relative z-10">
+      <!-- Login Card -->
+      <div class="w-full max-w-md">
+        <!-- Logo/Header -->
+        <div class="text-center mb-8 animate-float">
+          <div class="inline-flex items-center justify-center w-16 h-16 md:w-20 md:h-20 bg-black/10 backdrop-blur-sm rounded-2xl border border-white/20 shadow-2xl mb-4">
+            <i class="fas fa-comments text-white text-2xl md:text-3xl"></i>
+          </div>
+          <h1 class="text-white text-3xl md:text-4xl font-bold mb-2">Chatify</h1>
+          <p class="text-white/70 text-sm md:text-base">Sign in to start chatting</p>
+        </div>
+
+        <!-- Login Form Card -->
+        <div class="bg-black/10 backdrop-blur-xl border border-white/20 rounded-2xl shadow-2xl overflow-hidden">
+          <!-- Form Header -->
+          <div class="bg-gradient-to-r from-indigo-500/20 via-purple-500/20 to-fuchsia-500/20 border-b border-white/10 p-6">
+            <h2 class="text-white text-xl md:text-2xl font-bold text-center">Welcome Back</h2>
+          </div>
+
+          <div class="p-6 md:p-8">
+            <!-- Error Message -->
+            {% if form.errors %}
+              <div class="mb-6 bg-gradient-to-r from-red-500/20 to-fuchsia-500/20 backdrop-blur-sm border border-red-500/30 rounded-xl p-4 animate-pulse">
+                <div class="flex items-start space-x-3">
+                  <div class="flex-shrink-0">
+                    <i class="fas fa-exclamation-circle text-red-400 text-lg"></i>
+                  </div>
+                  <div>
+                    <h3 class="text-red-100 font-semibold mb-1">Invalid Credentials</h3>
+                    <p class="text-red-100/80 text-sm">Please check your username and password</p>
+                  </div>
+                </div>
+              </div>
+            {% endif %}
+
+            <!-- Login Form -->
+            <form method="post" class="space-y-6">
+              {% csrf_token %}
+
+              <!-- Username Field -->
+              <div class="group">
+                <label for="id_username" class="block text-white/80 text-sm font-medium mb-2 ml-1">Username</label>
+                <div class="relative">
+                  <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <i class="fas fa-user text-white/50 group-focus-within:text-indigo-400 transition-colors duration-200"></i>
+                  </div>
+                  <input type="text" name="username" id="id_username" required autofocus class="w-full bg-black/5 border border-white/10 text-white placeholder-white/50 rounded-xl pl-10 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-transparent transition-all duration-200 group-hover:bg-black/10" placeholder="Enter your username" />
+                </div>
+              </div>
+
+              <!-- Password Field -->
+              <div class="group">
+                <label for="id_password" class="block text-white/80 text-sm font-medium mb-2 ml-1">Password</label>
+                <div class="relative">
+                  <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <i class="fas fa-lock text-white/50 group-focus-within:text-indigo-400 transition-colors duration-200"></i>
+                  </div>
+                  <input type="password" name="password" id="id_password" required class="w-full bg-black/5 border border-white/10 text-white placeholder-white/50 rounded-xl pl-10 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-transparent transition-all duration-200 group-hover:bg-black/10" placeholder="Enter your password" />
+                  <!-- Show Password Toggle -->
+                  <button type="button" class="absolute inset-y-0 right-0 pr-3 flex items-center" onclick="togglePassword()"><i id="password-toggle" class="fas fa-eye text-white/50 hover:text-indigo-400 transition-colors duration-200"></i></button>
+                </div>
+              </div>
+
+              <!-- Submit Button -->
+              <button type="submit" class="w-full bg-gradient-to-r from-indigo-950 via-purple-950 to-violet-950 text-white font-semibold py-3 px-4 rounded-xl hover:from-indigo-800 hover:via-purple-800 hover:to-violet-800 transform hover:-translate-y-0.5 hover:shadow-2xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:ring-offset-2 focus:ring-offset-transparent">
+                <span class="flex items-center justify-center space-x-2">
+                  <i class="fas fa-sign-in-alt"></i>
+                  <span>Sign In</span>
+                </span>
+              </button>
+
+              <input type="hidden" name="next" value="{{ next }}" />
+            </form>
+          </div>
+
+          <!-- Footer Links -->
+          <div class="bg-gradient-to-r from-white/5 to-transparent border-t border-white/10 p-4 text-center">
+            <p class="text-white/60 text-sm">
+              Don't have an account?
+              <a href="#" class="text-indigo-300 hover:text-white font-medium transition-colors duration-200 ml-1">Contact Administrator</a>
+            </p>
+          </div>
+        </div>
+
+        <!-- Copyright -->
+        <div class="mt-8 text-center">
+          <p class="text-white/40 text-sm">
+            ©{% now 'Y' %}Chatify. All rights reserved.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // Toggle password visibility
+      function togglePassword() {
+        const passwordInput = document.getElementById('id_password')
+        const toggleIcon = document.getElementById('password-toggle')
+      
+        if (passwordInput.type === 'password') {
+          passwordInput.type = 'text'
+          toggleIcon.classList.remove('fa-eye')
+          toggleIcon.classList.add('fa-eye-slash')
+        } else {
+          passwordInput.type = 'password'
+          toggleIcon.classList.remove('fa-eye-slash')
+          toggleIcon.classList.add('fa-eye')
+        }
+      }
+      
+      // Add focus animation to form
+      document.addEventListener('DOMContentLoaded', function () {
+        const inputs = document.querySelectorAll('input')
+        inputs.forEach((input) => {
+          input.addEventListener('focus', function () {
+            this.parentElement.parentElement.classList.add('ring-2', 'ring-indigo-500/30', 'rounded-xl')
+          })
+          input.addEventListener('blur', function () {
+            this.parentElement.parentElement.classList.remove('ring-2', 'ring-indigo-500/30', 'rounded-xl')
+          })
+        })
+      
+        // Add typing effect to username placeholder
+        const usernameInput = document.getElementById('id_username')
+        const placeholderText = 'Enter your username'
+        let i = 0
+      
+        function typeWriter() {
+          if (i < placeholderText.length) {
+            usernameInput.placeholder = placeholderText.substring(0, i + 1)
+            i++
+            setTimeout(typeWriter, 50)
+          }
+        }
+      
+        // Start typing effect when page loads
+        setTimeout(typeWriter, 1000)
+      })
+    </script>
   </body>
 </html>
