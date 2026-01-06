@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -8,6 +9,12 @@
         Chatify
       {% endblock %}
     </title>
+
+    <meta name="description" content="Chatify" />
+    <meta name="keywords" content="Chatify" />
+
+    <!-- Favicons -->
+    <link href="{% static 'favicon.ico' %}" rel="icon" />
 
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -94,7 +101,10 @@
     <!-- Optional: Footer -->
     <footer class="mt-auto py-4 px-4 text-center text-white/70 text-sm">
       <p>
-        ©{% now 'Y' %}Chatify. All rights reserved.
+        Developed by <a href="https://amirhamidi.pythonanywhere.com/">Amir Hamidi</a>
+      </p>
+      <p>
+        ©{% now ' Y ' %}Chatify. All rights reserved.
       </p>
     </footer>
 
