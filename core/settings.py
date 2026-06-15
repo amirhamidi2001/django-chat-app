@@ -22,18 +22,21 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get('SECRET_KEY', "django-insecure-sjc665-wy8%prji5wdf*$48-kohipuxxt$8pa*3_6n&o*52dk4")
+SECRET_KEY = os.environ.get(
+    "SECRET_KEY", "django-insecure-sjc665-wy8%prji5wdf*$48-kohipuxxt$8pa*3_6n&o*52dk4"
+)
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get('DEBUG', 'False') == 'True'
+# DEBUG = os.environ.get("DEBUG", "False") == "True"
+DEBUG = "True"
 
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
+ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
 
 CSRF_TRUSTED_ORIGINS = [
     "https://chatify-1uaw.onrender.com",
 ]
 
-RENDER_EXTERNAL_HOSTNAME = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
+RENDER_EXTERNAL_HOSTNAME = os.environ.get("RENDER_EXTERNAL_HOSTNAME")
 if RENDER_EXTERNAL_HOSTNAME:
     ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
 
@@ -88,7 +91,7 @@ ASGI_APPLICATION = "core.asgi.application"
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
 DATABASES = {
-    'default': dj_database_url.config(
+    "default": dj_database_url.config(
         default=f'sqlite:///{BASE_DIR / "db.sqlite3"}',
         conn_max_age=600,
         conn_health_checks=True,
@@ -158,7 +161,7 @@ DATA_UPLOAD_MAX_MEMORY_SIZE = 10485760  # 10MB
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # Channel Layers Configuration - Using Redis as backing store
-REDIS_URL = os.environ.get('REDIS_URL', 'redis://127.0.0.1:6379')
+REDIS_URL = os.environ.get("REDIS_URL", "redis://127.0.0.1:6379")
 
 CHANNEL_LAYERS = {
     "default": {
@@ -168,3 +171,5 @@ CHANNEL_LAYERS = {
         },
     },
 }
+
+LOGOUT_REDIRECT_URL = "/"
