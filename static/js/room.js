@@ -269,7 +269,7 @@ function updateNotificationUI() {
 
     switch (permission) {
         case 'granted':
-            notificationToggle.classList.add('bg-green-500/20', 'text-green-400');
+            notificationToggle.classList.add('bg-emerald-500/20', 'text-emerald-400');
             notificationToggle.classList.remove('bg-red-500/20', 'text-red-400');
             notificationIcon.textContent = '🔔';
             notificationText.textContent = 'On';
@@ -279,7 +279,7 @@ function updateNotificationUI() {
 
         case 'denied':
             notificationToggle.classList.add('bg-red-500/20', 'text-red-400');
-            notificationToggle.classList.remove('bg-green-500/20', 'text-green-400');
+            notificationToggle.classList.remove('bg-emerald-500/20', 'text-emerald-400');
             notificationIcon.textContent = '🔕';
             notificationText.textContent = 'Blocked';
             notificationBanner.classList.add('hidden');
@@ -287,7 +287,7 @@ function updateNotificationUI() {
             break;
 
         case 'default':
-            notificationToggle.classList.remove('bg-green-500/20', 'text-green-400', 'bg-red-500/20', 'text-red-400');
+            notificationToggle.classList.remove('bg-emerald-500/20', 'text-emerald-400', 'bg-red-500/20', 'text-red-400');
             notificationIcon.textContent = '🔔';
             notificationText.textContent = 'Off';
 
@@ -606,10 +606,10 @@ function createSingleCheckmark() {
 }
 
 function createDoubleCheckmark() {
-    return `<svg class="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    return `<svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                 </svg>
-                <svg class="w-4 h-4 text-green-400 ml-[-8px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-4 h-4 text-emerald-400 ml-[-8px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                 </svg>`;
 }
@@ -733,17 +733,17 @@ function updateUserStatus(username, isOnline, lastSeen) {
     if (onlineStatusIndicator) {
         if (isOnline) {
             onlineStatusIndicator.classList.remove('bg-gray-400');
-            onlineStatusIndicator.classList.add('bg-green-400', 'animate-pulse');
+            onlineStatusIndicator.classList.add('bg-emerald-400', 'animate-pulse');
             lastSeenText.textContent = 'Online';
             lastSeenText.classList.remove('text-white/60');
-            lastSeenText.classList.add('text-green-400');
+            lastSeenText.classList.add('text-emerald-400');
         } else {
-            onlineStatusIndicator.classList.remove('bg-green-400', 'animate-pulse');
+            onlineStatusIndicator.classList.remove('bg-emerald-400', 'animate-pulse');
             onlineStatusIndicator.classList.add('bg-gray-400');
             if (lastSeen) {
                 const lastSeenDate = new Date(lastSeen);
                 lastSeenText.textContent = `Last seen ${getTimeAgo(lastSeenDate)}`;
-                lastSeenText.classList.remove('text-green-400');
+                lastSeenText.classList.remove('text-emerald-400');
                 lastSeenText.classList.add('text-white/60');
             }
         }
@@ -795,14 +795,14 @@ function displayMessage(data, animate = true, prepend = false) {
             messageContent = `
                     <div class="bg-black/10 backdrop-blur-sm rounded-xl p-3 mb-2">
                         <div class="flex items-center space-x-3">
-                            <div class="bg-gradient-to-br from-indigo-500/20 to-purple-500/20 p-2 rounded-lg">
+                            <div class="bg-gradient-to-br from-cyan-500/20 to-teal-500/20 p-2 rounded-lg">
                                 <span class="text-lg">${fileIcon}</span>
                             </div>
                             <div class="flex-1 min-w-0">
                                 <div class="font-medium text-white truncate">${escapeHtml(data.file_name)}</div>
                                 <div class="text-white/60 text-sm">${formatFileSize(data.file_size)}</div>
                             </div>
-                            <a href="${downloadUrl}" class="bg-gradient-to-r from-indigo-700 to-purple-700 hover:from-indigo-600 hover:to-purple-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 hover:scale-105" download>
+                            <a href="${downloadUrl}" class="bg-gradient-to-r from-cyan-700 to-teal-700 hover:from-cyan-600 hover:to-teal-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 hover:scale-105" download>
                                 Download
                             </a>
                         </div>
@@ -820,7 +820,7 @@ function displayMessage(data, animate = true, prepend = false) {
     if (isSent) {
         const isRead = data.is_read || false;
         readIndicatorHtml = `
-                <div class="read-indicator flex items-center space-x-1 ${isRead ? 'text-green-400' : 'text-white/70'}">
+                <div class="read-indicator flex items-center space-x-1 ${isRead ? 'text-emerald-400' : 'text-white/70'}">
                     ${isRead ? createDoubleCheckmark() : createSingleCheckmark()}
                 </div>
             `;
@@ -828,7 +828,7 @@ function displayMessage(data, animate = true, prepend = false) {
 
     messageDiv.innerHTML = `
             <div class="max-w-[85%] md:max-w-2xl ${prepend ? 'order-first' : ''}">
-                <div class="${isSent ? 'bg-gradient-to-r from-indigo-700 to-purple-700 text-white rounded-2xl rounded-br-lg' : 'bg-black/10 backdrop-blur-sm text-white/70 rounded-2xl rounded-bl-lg'} p-3 md:p-4 shadow-lg">
+                <div class="${isSent ? 'bg-gradient-to-r from-cyan-700 to-teal-700 text-white rounded-2xl rounded-br-lg' : 'bg-black/10 backdrop-blur-sm text-white/70 rounded-2xl rounded-bl-lg'} p-3 md:p-4 shadow-lg">
                     ${messageContent}
                 </div>
                 <div class="flex items-center ${isSent ? 'justify-end' : 'justify-start'} mt-1 space-x-2">
@@ -884,10 +884,10 @@ function updateConnectionStatus(isConnected) {
     if (isConnected) {
         connectionStatus.textContent = 'Connected';
         connectionStatus.classList.remove('bg-black/20', 'text-white/90');
-        connectionStatus.classList.add('bg-green-500/30', 'text-green-300');
+        connectionStatus.classList.add('bg-emerald-500/30', 'text-emerald-300');
     } else {
         connectionStatus.textContent = 'Disconnected';
-        connectionStatus.classList.remove('bg-green-500/30', 'text-green-300');
+        connectionStatus.classList.remove('bg-emerald-500/30', 'text-emerald-300');
         connectionStatus.classList.add('bg-red-500/30', 'text-red-300');
     }
 }

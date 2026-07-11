@@ -40,12 +40,12 @@
       }
     </script>
   </head>
-  <body class="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-950 to-black animate-gradient">
+  <body class="min-h-screen bg-gradient-to-br from-slate-900 via-cyan-950 to-black animate-gradient">
     <!-- Animated Background Elements -->
     <div class="fixed inset-0 overflow-hidden pointer-events-none">
-      <div class="absolute -top-40 -right-40 w-80 h-80 bg-purple-300/20 rounded-full blur-3xl animate-float"></div>
-      <div class="absolute -bottom-40 -left-40 w-80 h-80 bg-fuchsia-300/20 rounded-full blur-3xl animate-float" style="animation-delay: 2s"></div>
-      <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-indigo-300/10 rounded-full blur-3xl animate-float" style="animation-delay: 4s"></div>
+      <div class="absolute -top-40 -right-40 w-80 h-80 bg-teal-300/20 rounded-full blur-3xl animate-float"></div>
+      <div class="absolute -bottom-40 -left-40 w-80 h-80 bg-black-300/20 rounded-full blur-3xl animate-float" style="animation-delay: 2s"></div>
+      <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-cyan-300/10 rounded-full blur-3xl animate-float" style="animation-delay: 4s"></div>
     </div>
 
     <div class="min-h-screen flex items-center justify-center p-4 relative z-10">
@@ -63,14 +63,14 @@
         <!-- Login Form Card -->
         <div class="bg-black/10 backdrop-blur-xl border border-white/20 rounded-2xl shadow-2xl overflow-hidden">
           <!-- Form Header -->
-          <div class="bg-gradient-to-r from-indigo-500/20 via-purple-500/20 to-fuchsia-500/20 border-b border-white/10 p-6">
+          <div class="bg-gradient-to-r from-cyan-500/20 via-teal-500/20 to-black-500/20 border-b border-white/10 p-6">
             <h2 class="text-white text-xl md:text-2xl font-bold text-center">Welcome Back</h2>
           </div>
 
           <div class="p-6 md:p-8">
             <!-- Error Message -->
             {% if form.errors %}
-              <div class="mb-6 bg-gradient-to-r from-red-500/20 to-fuchsia-500/20 backdrop-blur-sm border border-red-500/30 rounded-xl p-4 animate-pulse">
+              <div class="mb-6 bg-gradient-to-r from-red-500/20 to-black-500/20 backdrop-blur-sm border border-red-500/30 rounded-xl p-4 animate-pulse">
                 <div class="flex items-start space-x-3">
                   <div class="flex-shrink-0">
                     <i class="fas fa-exclamation-circle text-red-400 text-lg"></i>
@@ -92,9 +92,9 @@
                 <label for="id_username" class="block text-white/80 text-sm font-medium mb-2 ml-1">Username</label>
                 <div class="relative">
                   <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <i class="fas fa-user text-white/50 group-focus-within:text-indigo-400 transition-colors duration-200"></i>
+                    <i class="fas fa-user text-white/50 group-focus-within:text-cyan-400 transition-colors duration-200"></i>
                   </div>
-                  <input type="text" name="username" id="id_username" required autofocus class="w-full bg-black/5 border border-white/10 text-white placeholder-white/50 rounded-xl pl-10 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-transparent transition-all duration-200 group-hover:bg-black/10" placeholder="Enter your username" />
+                  <input type="text" name="username" id="id_username" required autofocus class="w-full bg-black/5 border border-white/10 text-white placeholder-white/50 rounded-xl pl-10 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-transparent transition-all duration-200 group-hover:bg-black/10" placeholder="Enter your username" />
                 </div>
               </div>
 
@@ -103,16 +103,16 @@
                 <label for="id_password" class="block text-white/80 text-sm font-medium mb-2 ml-1">Password</label>
                 <div class="relative">
                   <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <i class="fas fa-lock text-white/50 group-focus-within:text-indigo-400 transition-colors duration-200"></i>
+                    <i class="fas fa-lock text-white/50 group-focus-within:text-cyan-400 transition-colors duration-200"></i>
                   </div>
-                  <input type="password" name="password" id="id_password" required class="w-full bg-black/5 border border-white/10 text-white placeholder-white/50 rounded-xl pl-10 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-transparent transition-all duration-200 group-hover:bg-black/10" placeholder="Enter your password" />
+                  <input type="password" name="password" id="id_password" required class="w-full bg-black/5 border border-white/10 text-white placeholder-white/50 rounded-xl pl-10 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-transparent transition-all duration-200 group-hover:bg-black/10" placeholder="Enter your password" />
                   <!-- Show Password Toggle -->
-                  <button type="button" class="absolute inset-y-0 right-0 pr-3 flex items-center" onclick="togglePassword()"><i id="password-toggle" class="fas fa-eye text-white/50 hover:text-indigo-400 transition-colors duration-200"></i></button>
+                  <button type="button" class="absolute inset-y-0 right-0 pr-3 flex items-center" onclick="togglePassword()"><i id="password-toggle" class="fas fa-eye text-white/50 hover:text-cyan-400 transition-colors duration-200"></i></button>
                 </div>
               </div>
 
               <!-- Submit Button -->
-              <button type="submit" class="w-full bg-gradient-to-r from-indigo-950 via-purple-950 to-violet-950 text-white font-semibold py-3 px-4 rounded-xl hover:from-indigo-800 hover:via-purple-800 hover:to-violet-800 transform hover:-translate-y-0.5 hover:shadow-2xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:ring-offset-2 focus:ring-offset-transparent">
+              <button type="submit" class="w-full bg-gradient-to-r from-cyan-950 via-teal-950 to-black-950 text-white font-semibold py-3 px-4 rounded-xl hover:from-cyan-800 hover:via-teal-800 hover:to-black-800 transform hover:-translate-y-0.5 hover:shadow-2xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:ring-offset-2 focus:ring-offset-transparent">
                 <span class="flex items-center justify-center space-x-2">
                   <i class="fas fa-sign-in-alt"></i>
                   <span>Sign In</span>
@@ -127,7 +127,7 @@
           <div class="bg-gradient-to-r from-white/5 to-transparent border-t border-white/10 p-4 text-center">
             <p class="text-white/60 text-sm">
               Don't have an account?
-              <a href="#" class="text-indigo-300 hover:text-white font-medium transition-colors duration-200 ml-1">Contact Administrator</a>
+              <a href="#" class="text-cyan-300 hover:text-white font-medium transition-colors duration-200 ml-1">Contact Administrator</a>
             </p>
           </div>
         </div>
@@ -163,10 +163,10 @@
         const inputs = document.querySelectorAll('input')
         inputs.forEach((input) => {
           input.addEventListener('focus', function () {
-            this.parentElement.parentElement.classList.add('ring-2', 'ring-indigo-500/30', 'rounded-xl')
+            this.parentElement.parentElement.classList.add('ring-2', 'ring-cyan-500/30', 'rounded-xl')
           })
           input.addEventListener('blur', function () {
-            this.parentElement.parentElement.classList.remove('ring-2', 'ring-indigo-500/30', 'rounded-xl')
+            this.parentElement.parentElement.classList.remove('ring-2', 'ring-cyan-500/30', 'rounded-xl')
           })
         })
       

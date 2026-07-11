@@ -18,7 +18,7 @@
     {% if users %}
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
         {% for user in users %}
-          <a href="{% url 'chat:room' user.username %}" class="group bg-gradient-to-br from-indigo-950/90 via-purple-950/90 to-slate-950/90 backdrop-blur-sm border border-white/20 rounded-xl p-4 md:p-6 text-white transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl hover:border-white/40 hover:from-indigo-800 hover:via-purple-800 hover:to-slate-800 transform hover:-translate-y-1">
+          <a href="{% url 'chat:room' user.username %}" class="group bg-gradient-to-br from-cyan-950/90 via-teal-950/90 to-slate-950/90 backdrop-blur-sm border border-white/20 rounded-xl p-4 md:p-6 text-white transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl hover:border-white/40 hover:from-cyan-800 hover:via-teal-800 hover:to-slate-800 transform hover:-translate-y-1">
             <div class="flex items-center space-x-4">
               <!-- User Avatar with Gradient Background -->
               <div class="flex-shrink-0">
@@ -30,7 +30,7 @@
                 <div class="flex items-center space-x-2">
                   <h3 class="font-bold text-lg md:text-xl truncate">{{ user.username }}</h3>
                   {% comment %}Optional: Add online status indicator{% endcomment %}
-                  <span class="inline-block w-2 h-2 rounded-full bg-green-400 group-hover:animate-pulse"></span>
+                  <span class="inline-block w-2 h-2 rounded-full bg-emerald-400 group-hover:animate-pulse"></span>
                 </div>
                 <div class="flex items-center space-x-2 text-white/80 text-sm md:text-base mt-1">
                   <i class="fas fa-comment-dots text-sm"></i>
@@ -61,7 +61,7 @@
       <!-- Empty State -->
       <div class="flex flex-col items-center justify-center py-12 md:py-16 text-center">
         <div class="mb-6">
-          <div class="bg-gradient-to-br from-indigo-400/20 to-purple-400/20 backdrop-blur-sm w-24 h-24 md:w-32 md:h-32 rounded-full flex items-center justify-center mx-auto mb-6 border border-white/20">
+          <div class="bg-gradient-to-br from-cyan-400/20 to-teal-400/20 backdrop-blur-sm w-24 h-24 md:w-32 md:h-32 rounded-full flex items-center justify-center mx-auto mb-6 border border-white/20">
             <i class="fas fa-users text-white/40 text-4xl md:text-5xl"></i>
           </div>
           <h3 class="text-white text-xl md:text-2xl font-bold mb-3">No users available yet</h3>
@@ -84,8 +84,8 @@
 
           <div class="bg-black/5 backdrop-blur-sm border border-white/10 rounded-xl p-4 text-left">
             <div class="flex items-start space-x-3">
-              <div class="bg-purple-500/20 p-2 rounded-lg">
-                <i class="fas fa-sync-alt text-purple-400"></i>
+              <div class="bg-teal-500/20 p-2 rounded-lg">
+                <i class="fas fa-sync-alt text-teal-400"></i>
               </div>
               <div>
                 <h4 class="text-white font-medium mb-1">Refresh</h4>
